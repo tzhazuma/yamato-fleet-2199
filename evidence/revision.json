@@ -1,0 +1,174 @@
+{
+  "capturedAt": "2026-10-11T17:11:07.029Z",
+  "files": {
+    "assets/models/README.md": {
+      "sha256": "18a6d0d2b0abd61aa540af11c2bdd2c8f1fbdbd4950a5d78733b3f28747f78a8",
+      "bytes": 7084
+    },
+    "assets/models/andromeda.mtl": {
+      "sha256": "e428e4ce63ac48ab124105636fe903fa9357af9f0846032fe2234f932edc258d",
+      "bytes": 1379
+    },
+    "assets/models/andromeda.obj": {
+      "sha256": "098c72da83f681a0d1ed12ddca8cfe6a7d747fc01ee4401c4146f5948db0377c",
+      "bytes": 670172
+    },
+    "assets/models/bolar_carrier.mtl": {
+      "sha256": "464f8e74bfdf3dea0779b2d8d74967a568bf323b45357fe5f547ce50d8b3e403",
+      "bytes": 1099
+    },
+    "assets/models/bolar_carrier.obj": {
+      "sha256": "643a026bfc05b1ea221f10f9fcc073b5fa19e8822a2a8477738d54e2cf03f282",
+      "bytes": 226983
+    },
+    "assets/models/garmillas_dessler.mtl": {
+      "sha256": "a2a0521118583f0fa2e86c93090b78bac664939a33946b7e16f551290cf17ec8",
+      "bytes": 1247
+    },
+    "assets/models/garmillas_dessler.obj": {
+      "sha256": "c374d75a8521f4ae52593d7cc302fff1ba902564408accfda0a8233e36e30b61",
+      "bytes": 516900
+    },
+    "assets/models/garmillas_gaiderol.mtl": {
+      "sha256": "775c530ff72352dc7792ade86577b30e5b4593901fa1f6a6da49b7397a96e5f3",
+      "bytes": 1248
+    },
+    "assets/models/garmillas_gaiderol.obj": {
+      "sha256": "e3c2319754d4a6b04ac6e604591d0007905083bb84afcafc075f524312792f1d",
+      "bytes": 454609
+    },
+    "assets/models/garmillas_kelkapia.mtl": {
+      "sha256": "c87f01c54f0697fe8f6c39f0d60d4c02d0d70875db68437469cc14885d4a6b73",
+      "bytes": 1104
+    },
+    "assets/models/garmillas_kelkapia.obj": {
+      "sha256": "cb0a81db46cb36bcd83e172b8a0ba3e271ea1c9515200a0cfc76ebe574cefd2d",
+      "bytes": 325052
+    },
+    "assets/models/kirishima.mtl": {
+      "sha256": "255db9ae73b0e05ced1e6d25379b6ae0f799aad27c071231a6236aa5e157960d",
+      "bytes": 1379
+    },
+    "assets/models/kirishima.obj": {
+      "sha256": "9fd44dd2bc8cd9e184ed5331aa306ec99d794e18b7feba0cac3c2bc818c9fc46",
+      "bytes": 491437
+    },
+    "assets/models/manifest.json": {
+      "sha256": "3b2a3e24e23cc59ff8f9e91222e3487d265cca75ff867aea5fb16f5af7060ae3",
+      "bytes": 40972
+    },
+    "assets/models/yamato.mtl": {
+      "sha256": "85314c34778baa7aa5b602f5774f6c8900897296d96b06d324cdaf6f6b350241",
+      "bytes": 1376
+    },
+    "assets/models/yamato.obj": {
+      "sha256": "4937e295563895387d7fe2955cc0243415a865e59bf3c6296bb4a3344ea507ae",
+      "bytes": 612078
+    },
+    "assets/models/yukikaze.mtl": {
+      "sha256": "32a021d1702a45a8a30ac8c13aacdae7096d03784f006a2a3af9f0f42a9362d8",
+      "bytes": 1235
+    },
+    "assets/models/yukikaze.obj": {
+      "sha256": "6c853b531a0e234dce8cf042c6e216a1ce60caa0a02697a7186488a7735c3a88",
+      "bytes": 254186
+    },
+    "index.html": {
+      "sha256": "c8ccc55e6a7b2712fe3b52da097421d9842bd9707227879db6582197d60b5fb8",
+      "bytes": 4003
+    },
+    "package.json": {
+      "sha256": "5839b57df8a0b5bd96efd3003ec12c17798cd71990a60e4d2029b128cc87130a",
+      "bytes": 610
+    },
+    "src/ai/fleetai.js": {
+      "sha256": "bfc8d63d7bbe8bad19fafa8dcd2e1b6e333403119ad95644d5d97d0ed7829482",
+      "bytes": 53041
+    },
+    "src/core/assets.js": {
+      "sha256": "731e9973158fd4a970f6799081c29db313f58511e86985b23e21d301ce00d100",
+      "bytes": 12203
+    },
+    "src/core/audio.js": {
+      "sha256": "675dc3d6bc64f22349a9f0bc73e303b546e28a88ef08ec0aaf24fff23dd399ce",
+      "bytes": 41535
+    },
+    "src/core/config.js": {
+      "sha256": "78ad97b897d22858eb03b5f6e6d1697309e6d847a7011ed0b3388fe8cbd23bd9",
+      "bytes": 20057
+    },
+    "src/core/fallback_manifest.js": {
+      "sha256": "699eb8b5dc8e6e3156cec979ce2082af6c578cd1abcf26d4195282ba6b2deb3d",
+      "bytes": 4981
+    },
+    "src/core/input.js": {
+      "sha256": "cb05b14803338fe45629f439ef28480a2e76b0ec79143c8362322780a83b84ca",
+      "bytes": 4442
+    },
+    "src/core/math.js": {
+      "sha256": "335d0bc338baa55cbac758abb46233c7085df45da66c4dfab54bce87bcfc8c16",
+      "bytes": 5776
+    },
+    "src/core/objparse.js": {
+      "sha256": "9605cbe316aa0e9bc8daed7f429b36c88d1d1213684490cb5089f9d02963d1a8",
+      "bytes": 6922
+    },
+    "src/core/rng.js": {
+      "sha256": "3c8ff013124aa8acbfcf6d7ed900c2f2c6d7809c3e83b07339bbed57cf4fefe1",
+      "bytes": 2152
+    },
+    "src/core/scene.js": {
+      "sha256": "4acd30990219ff0fed2cf0b2a1b2a98646099cd20987efc524e235a4745ea186",
+      "bytes": 18146
+    },
+    "src/entities/effects.js": {
+      "sha256": "3409502d62a9d3ffc86906c614a0e2890e8aa5f2fcb2054cfed3eb81104dfe15",
+      "bytes": 17866
+    },
+    "src/entities/projectile.js": {
+      "sha256": "b9039d65cacfa56f8df5bff656eb87132487224765ac53fbce4faff6a91fccb0",
+      "bytes": 15624
+    },
+    "src/entities/ship.js": {
+      "sha256": "110fc1e656e1e7779fe837af24a3fcb65d187f8c871fc8ad2bffe23126617346",
+      "bytes": 30068
+    },
+    "src/main.js": {
+      "sha256": "aac11e4701ce796be602b72af6a8febb5e9fb251e18ebeaa46a78f1f59de55c8",
+      "bytes": 31475
+    },
+    "src/render/materials.js": {
+      "sha256": "6151eac7c2b0dd594cd5ee459d92c58e802127d7efe6d669d7feaca8d629609c",
+      "bytes": 4960
+    },
+    "src/ui/hud.js": {
+      "sha256": "d66424e7e0eb3ca06a13a27ad071c11b89237c2755c29c973d84b559d86f0c9d",
+      "bytes": 79762
+    },
+    "src/ui/radar.js": {
+      "sha256": "a648a5c7476348a6c4fb105b7f1149605448cb5f7a8e22c006b2b626a8dc6810",
+      "bytes": 18236
+    },
+    "src/weapons/weapons.js": {
+      "sha256": "aebf66f467e892d55c85ddd689ba1d823d3dddb1f16ab66bed02adc8d7daab61",
+      "bytes": 14087
+    },
+    "tools/gen_models.py": {
+      "sha256": "7ec3006203e79f5edf9a728bdd4027fb5c0963eed9e4cf015d69ee74c5bdec60",
+      "bytes": 154358
+    },
+    "tools/render_preview.py": {
+      "sha256": "69c80bb26eff734c3284760d9a941f56671a77c2c8dabbce8c59a190ca6b4b4d",
+      "bytes": 12377
+    },
+    "tools/serve.mjs": {
+      "sha256": "afba080ab557cd62e0556cbc305fbd0f540dedb3c7351c76a59ccc491bb8d404",
+      "bytes": 4960
+    },
+    "tools/validate_models.py": {
+      "sha256": "e397b4f101bd704735955c7586082d78faafe59f912b8c4256b41a7793c35be0",
+      "bytes": 31135
+    }
+  },
+  "treeHash": "29afdf0f001de946b155545ad22394bbde0491913837c4a0e319524eb7b05d05"
+}

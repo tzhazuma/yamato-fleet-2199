@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<base href="../" />
+<title>YAMATO FLEET 2199 — deterministic loop probe (verifier)</title>
+<!--
+  evidence/loop-probe.html — VERIFIER INSTRUMENT, not a product file.
+
+  WHY THIS EXISTS
+  The demo's whole simulation is driven by requestAnimationFrame. When the
+  browser window is occluded/minimised the page reports document.hidden === true
+  and rAF is suspended, so world.time stops advancing and no wave-flow,
+  victory or defeat transition can be observed. Chrome also throttles
+  setTimeout to ~1/s in a background tab, so a timer shim cannot fix it either.
+
+  This page therefore captures the app's frame callback instead of scheduling
+  it: a requestAnimationFrame shim stores the callback in window.__RAF_CB__ and
+  (unless window.__MANUAL__ is true) still forwards to the real rAF, so the
+  demo behaves normally when the tab IS visible. window.__RUN__(frames, dtMs)
+  then invokes the REAL frame() callback — the same closure src/main.js
+  registers, containing simulate(), updateWaveFlow(), handlePlayerWeapons(),
+  the death handling and endGame() — with synthetic, exactly-spaced timestamps.
+  The product's loop code is untouched; only its clock source changes.
+
+  Everything else is identical to /index.html: same DOM shell ids, same import
+  map, same src/main.js boot() path, and console hooks installed before the app
+  loads. Read window.__PROBE__ for console traffic and window.__RUN__ to step.
+
+  Owned by the verifier (tests/**, evidence/**, docs/VERIFY.md).
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "../vendor/three/build/three.module.js",
+    "three/addons/": "../vendor/three/examples/jsm/"
+  }
+}
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #05060a; overflow: hidden; }
+  body { font-family: "Helvetica Neue", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; color: #dfe9f5; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  #boot { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #101a2c 0%, #05060a 70%); transition: opacity .6s ease; text-align: center; }
+  #boot.hidden { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud" aria-live="polite"></div>
+  <div id="boot">
+    <div class="boot-inner">
+      <div class="boot-kicker">地球連邦宇宙海軍 / UNITED NATIONS COSMIC NAVY</div>
+      <h1>YAMATO<span>FLEET</span>2199</h1>
+      <div class="boot-sub">宇宙戦艦ヤマト 艦隊戦 — 技術デモ</div>
+      <div class="boot-bar"><i id="boot-progress"></i></div>
+      <div class="boot-status" id="boot-status">起動中… initialising</div>
+      <div class="boot-err" id="boot-err" hidden></div>
+    </div>
+  </div>
+
+  <script>
+    // ---- 1. console capture, before any app module loads --------------------
+    window.__PROBE__ = { startedAt: new Date().toISOString(), errors: [], warnings: [], logs: [], windowErrors: [], unhandledRejections: [], phase: 'hooks-installed' };
+    const P = window.__PROBE__;
+    const fmt = (a) => a.map((v) => (v instanceof Error) ? `${v.name}: ${v.message}\n${v.stack || ''}` : (typeof v === 'string' ? v : (() => { try { return JSON.stringify(v); } catch { return String(v); } })())).join(' ');
+    for (const level of ['error', 'warn', 'log', 'info', 'debug']) {
+      const orig = console[level].bind(console);
+      const bucket = level === 'warn' ? P.warnings : level === 'error' ? P.errors : P.logs;
+      console[level] = (...args) => { try { bucket.push({ t: Math.round(performance.now()), msg: fmt(args) }); } catch (_) {} orig(...args); };
+    }
+    window.addEventListener('error', (e) => P.windowErrors.push({ t: Math.round(performance.now()), message: e.message, source: e.filename, line: e.lineno, stack: e.error && e.error.stack }));
+    window.addEventListener('unhandledrejection', (e) => P.unhandledRejections.push({ t: Math.round(performance.now()), reason: String((e.reason && e.reason.stack) || e.reason) }));
+
+    // ---- 2. frame-clock capture shim ---------------------------------------
+    window.__MANUAL__ = false;
+    window.__RAF_CB__ = null;
+    window.__RAF_COUNT__ = 0;
+    const realRaf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = function (cb) {
+      window.__RAF_CB__ = cb;                 // the app re-registers itself every frame
+      window.__RAF_COUNT__++;
+      if (window.__MANUAL__) return window.__RAF_COUNT__;
+      return realRaf(cb);
+    };
+
+    // ---- 3. deterministic stepper ------------------------------------------
+    // Invokes the REAL frame() closure with synthetic, exactly-spaced timestamps.
+    window.__RUN__ = function (frames = 1, dtMs = 1000 / 60) {
+      if (typeof window.__RAF_CB__ !== 'function') return { ok: false, reason: 'frame callback not captured yet' };
+      if (window.__CLOCK__ === undefined) window.__CLOCK__ = performance.now();
+      let ran = 0;
+      for (let i = 0; i < frames; i++) {
+        window.__CLOCK__ += dtMs;
+        try { window.__RAF_CB__(window.__CLOCK__); ran++; }
+        catch (err) { P.windowErrors.push({ during: '__RUN__', atFrame: ran, message: String((err && err.stack) || err) }); break; }
+      }
+      return { ok: true, ran, clock: window.__CLOCK__ };
+    };
+
+    // ---- 4. boot, mirroring index.html's inline module ----------------------
+    (async () => {
+      const errEl = document.getElementById('boot-err');
+      function fail(msg) { if (!errEl) return; errEl.hidden = false; errEl.textContent = String(msg); const st = document.getElementById('boot-status'); if (st) st.textContent = '起動失敗 / BOOT FAILED'; }
+      window.addEventListener('error', (e) => fail(e.message || e.error));
+      window.addEventListener('unhandledrejection', (e) => fail((e.reason && e.reason.stack) || e.reason));
+      try {
+        P.phase = 'importing-main';
+        const mod = await import('../src/main.js');
+        P.phase = 'booting';
+        if (mod && typeof mod.boot === 'function') await mod.boot();
+        P.phase = 'ready';
+        P.rafCallbackCaptured = typeof window.__RAF_CB__ === 'function';
+      } catch (err) {
+        P.phase = 'failed'; P.bootFailure = String((err && err.stack) || err);
+        fail((err && err.stack) || err);
+      }
+    })();
+  </script>
+</body>
+</html>

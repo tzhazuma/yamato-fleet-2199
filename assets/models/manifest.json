@@ -1,0 +1,2189 @@
+{
+  "schema": "yamato-fleet/models@1",
+  "units": "meters",
+  "axis": {
+    "forward": "-Z",
+    "up": "+Y"
+  },
+  "models": [
+    {
+      "id": "yamato",
+      "displayName": "Yamato (BBY-01)",
+      "displayNameJa": "ヤマト",
+      "faction": "uncf",
+      "shipClass": "Yamato-class",
+      "role": "battleship",
+      "obj": "yamato.obj",
+      "mtl": "yamato.mtl",
+      "lengthM": 333,
+      "beamM": 48,
+      "triangles": 10940,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "ciws_5",
+        "ciws_6",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3",
+        "turret_secondary_1",
+        "turret_secondary_2",
+        "turret_secondary_3",
+        "turret_secondary_4"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            0.0,
+            1.2,
+            -146.52
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            17.339,
+            -118.215
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            23.387,
+            -74.925
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            20.12,
+            99.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            15.592,
+            15.176,
+            -28.305
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            -15.592,
+            15.176,
+            -28.305
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_3",
+          "kind": "turret",
+          "pos": [
+            16.39,
+            14.773,
+            48.285
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_4",
+          "kind": "turret",
+          "pos": [
+            -16.39,
+            14.773,
+            48.285
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            13.108,
+            16.868,
+            -101.565
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -13.108,
+            16.868,
+            -101.565
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            17.829,
+            14.776,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -17.829,
+            14.776,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_5",
+          "kind": "anti_air",
+          "pos": [
+            14.426,
+            15.49,
+            114.885
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_6",
+          "kind": "anti_air",
+          "pos": [
+            -14.426,
+            15.49,
+            114.885
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            -9.6,
+            0.0,
+            156.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            9.6,
+            0.0,
+            156.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "hull_grey",
+        "hull_red",
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "accent_gold",
+        "hull_white",
+        "hull_black"
+      ]
+    },
+    {
+      "id": "andromeda",
+      "displayName": "Andromeda (AAA-01)",
+      "displayNameJa": "アンドロメダ",
+      "faction": "uncf",
+      "shipClass": "Andromeda-class",
+      "role": "battleship",
+      "obj": "andromeda.obj",
+      "mtl": "andromeda.mtl",
+      "lengthM": 444,
+      "beamM": 62,
+      "triangles": 11988,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "ciws_5",
+        "ciws_6",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3",
+        "turret_main_4",
+        "turret_secondary_1",
+        "turret_secondary_2",
+        "turret_secondary_3",
+        "turret_secondary_4"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            -13.0,
+            1.4,
+            -199.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "wave_motion_gun_2",
+          "kind": "wmgun",
+          "pos": [
+            13.0,
+            1.4,
+            -199.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            16.514,
+            -162.06
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            23.738,
+            -99.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            19.343,
+            97.68
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "turret_main_4",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            13.817,
+            159.84
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            20.42,
+            13.6,
+            -44.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            -20.42,
+            13.6,
+            -44.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_3",
+          "kind": "turret",
+          "pos": [
+            20.81,
+            13.486,
+            79.92
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_4",
+          "kind": "turret",
+          "pos": [
+            -20.81,
+            13.486,
+            79.92
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            16.453,
+            15.65,
+            -133.2
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -16.453,
+            15.65,
+            -133.2
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            24.517,
+            13.3,
+            8.88
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -24.517,
+            13.3,
+            8.88
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_5",
+          "kind": "anti_air",
+          "pos": [
+            20.01,
+            13.75,
+            142.08
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_6",
+          "kind": "anti_air",
+          "pos": [
+            -20.01,
+            13.75,
+            142.08
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            0.0,
+            0.0,
+            210.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            -10.0,
+            9.0,
+            213.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_3",
+          "kind": "thruster",
+          "pos": [
+            10.0,
+            9.0,
+            213.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_4",
+          "kind": "thruster",
+          "pos": [
+            -10.0,
+            -9.0,
+            213.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_5",
+          "kind": "thruster",
+          "pos": [
+            10.0,
+            -9.0,
+            213.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "hull_grey",
+        "hull_red",
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "accent_gold",
+        "hull_white",
+        "hull_black"
+      ]
+    },
+    {
+      "id": "kirishima",
+      "displayName": "Kirishima (CCV-05)",
+      "displayNameJa": "霧島",
+      "faction": "uncf",
+      "shipClass": "Kongo-class (refit)",
+      "role": "cruiser",
+      "obj": "kirishima.obj",
+      "mtl": "kirishima.mtl",
+      "lengthM": 205,
+      "beamM": 34,
+      "triangles": 8872,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "ciws_5",
+        "ciws_6",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3",
+        "turret_main_4",
+        "turret_secondary_1",
+        "turret_secondary_2",
+        "turret_secondary_3",
+        "turret_secondary_4"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            0.0,
+            1.0,
+            -94.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            12.733,
+            -65.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            18.1,
+            -41.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            15.675,
+            36.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "turret_main_4",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            12.255,
+            67.65
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            11.258,
+            11.829,
+            -16.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            -11.258,
+            11.829,
+            -16.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_3",
+          "kind": "turret",
+          "pos": [
+            11.046,
+            11.775,
+            28.7
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_4",
+          "kind": "turret",
+          "pos": [
+            -11.046,
+            11.775,
+            28.7
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            10.881,
+            12.5,
+            -53.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -10.881,
+            12.5,
+            -53.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            12.415,
+            11.575,
+            12.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -12.415,
+            11.575,
+            12.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_5",
+          "kind": "anti_air",
+          "pos": [
+            8.563,
+            12.627,
+            77.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_6",
+          "kind": "anti_air",
+          "pos": [
+            -8.563,
+            12.627,
+            77.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            -7.4,
+            0.0,
+            95.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            7.4,
+            0.0,
+            95.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_3",
+          "kind": "thruster",
+          "pos": [
+            0.0,
+            0.0,
+            96.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "hull_grey",
+        "hull_red",
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "accent_gold",
+        "hull_white",
+        "hull_black"
+      ]
+    },
+    {
+      "id": "yukikaze",
+      "displayName": "Yukikaze (DD-117)",
+      "displayNameJa": "雪風",
+      "faction": "uncf",
+      "shipClass": "Isokaze-class",
+      "role": "destroyer",
+      "obj": "yukikaze.obj",
+      "mtl": "yukikaze.mtl",
+      "lengthM": 80,
+      "beamM": 38,
+      "triangles": 4628,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "ciws_1",
+        "ciws_2",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_secondary_1",
+        "turret_secondary_2"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            0.0,
+            1.2,
+            -38.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            9.635,
+            1.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            9.8,
+            -12.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            7.0,
+            9.447,
+            8.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            -7.0,
+            9.447,
+            8.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            8.4,
+            9.8,
+            -17.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -8.4,
+            9.8,
+            -17.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            0.0,
+            0.0,
+            36.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "vernier_1",
+          "kind": "thruster",
+          "pos": [
+            -9.4,
+            0.0,
+            -18.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "vernier_2",
+          "kind": "thruster",
+          "pos": [
+            9.4,
+            0.0,
+            -18.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "vernier_3",
+          "kind": "thruster",
+          "pos": [
+            0.0,
+            -8.6,
+            -5.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "hull_grey",
+        "hull_red",
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "accent_gold",
+        "hull_white"
+      ]
+    },
+    {
+      "id": "garmillas_dessler",
+      "displayName": "Desler flagship",
+      "displayNameJa": "デスラー旗艦",
+      "faction": "garmillas",
+      "shipClass": "Desler flagship",
+      "role": "flagship",
+      "obj": "garmillas_dessler.obj",
+      "mtl": "garmillas_dessler.mtl",
+      "lengthM": 638,
+      "beamM": 245,
+      "triangles": 9334,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3",
+        "turret_main_4",
+        "turret_main_5",
+        "turret_main_6",
+        "turret_secondary_1",
+        "turret_secondary_2",
+        "turret_secondary_3",
+        "turret_secondary_4"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            0.0,
+            0.0,
+            -274.34
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            53.9,
+            14.25,
+            -191.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            -53.9,
+            14.25,
+            -191.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            53.9,
+            14.25,
+            -31.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_4",
+          "kind": "turret",
+          "pos": [
+            -53.9,
+            14.25,
+            -31.9
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_5",
+          "kind": "turret",
+          "pos": [
+            53.9,
+            14.25,
+            127.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_6",
+          "kind": "turret",
+          "pos": [
+            -53.9,
+            14.25,
+            127.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            107.8,
+            -14.25,
+            -127.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            -107.8,
+            -14.25,
+            -127.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_3",
+          "kind": "turret",
+          "pos": [
+            107.8,
+            -14.25,
+            63.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_4",
+          "kind": "turret",
+          "pos": [
+            -107.8,
+            -14.25,
+            63.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            88.2,
+            14.25,
+            -223.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -88.2,
+            14.25,
+            -223.3
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            88.2,
+            14.25,
+            191.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -88.2,
+            14.25,
+            191.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            -68.6,
+            0.0,
+            306.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            0.0,
+            0.0,
+            306.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_3",
+          "kind": "thruster",
+          "pos": [
+            68.6,
+            0.0,
+            306.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_4",
+          "kind": "thruster",
+          "pos": [
+            -34.3,
+            13.0,
+            311.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_5",
+          "kind": "thruster",
+          "pos": [
+            34.3,
+            13.0,
+            311.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "accent_gold",
+        "hull_green",
+        "hull_olive",
+        "hull_black"
+      ]
+    },
+    {
+      "id": "garmillas_kelkapia",
+      "displayName": "Kelkapia-class cruiser",
+      "displayNameJa": "ケルカピア型",
+      "faction": "garmillas",
+      "shipClass": "Kelkapia-class",
+      "role": "cruiser",
+      "obj": "garmillas_kelkapia.obj",
+      "mtl": "garmillas_kelkapia.mtl",
+      "lengthM": 240,
+      "beamM": 48,
+      "triangles": 5912,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3",
+        "turret_secondary_1",
+        "turret_secondary_2"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            -6.4,
+            0.6,
+            -105.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "wave_motion_gun_2",
+          "kind": "wmgun",
+          "pos": [
+            6.4,
+            0.6,
+            -105.6
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            11.653,
+            -60.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            11.653,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            11.653,
+            60.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            -11.653,
+            -36.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            -11.653,
+            36.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            17.28,
+            11.653,
+            -19.2
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -17.28,
+            11.653,
+            -19.2
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            17.28,
+            11.653,
+            28.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -17.28,
+            11.653,
+            28.8
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            -10.56,
+            0.0,
+            112.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            10.56,
+            0.0,
+            112.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_3",
+          "kind": "thruster",
+          "pos": [
+            0.0,
+            9.0,
+            115.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "hull_green",
+        "hull_olive",
+        "hull_black"
+      ]
+    },
+    {
+      "id": "garmillas_gaiderol",
+      "displayName": "Gaiderol-class battleship",
+      "displayNameJa": "ガイデロル型",
+      "faction": "garmillas",
+      "shipClass": "Gaiderol-class",
+      "role": "battleship",
+      "obj": "garmillas_gaiderol.obj",
+      "mtl": "garmillas_gaiderol.mtl",
+      "lengthM": 350,
+      "beamM": 46,
+      "triangles": 8162,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3",
+        "turret_main_4",
+        "turret_secondary_1",
+        "turret_secondary_2",
+        "turret_secondary_3"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            0.0,
+            0.5,
+            -154.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            13.836,
+            -112.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            13.836,
+            -52.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            13.836,
+            28.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_4",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            13.836,
+            98.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            -13.836,
+            -87.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            -13.836,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            -13.836,
+            77.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            18.4,
+            13.836,
+            -70.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -18.4,
+            13.836,
+            -70.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            18.4,
+            13.836,
+            63.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -18.4,
+            13.836,
+            63.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            -8.28,
+            8.0,
+            165.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            -8.28,
+            -8.0,
+            165.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_3",
+          "kind": "thruster",
+          "pos": [
+            8.28,
+            8.0,
+            165.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_4",
+          "kind": "thruster",
+          "pos": [
+            8.28,
+            -8.0,
+            165.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "accent_gold",
+        "hull_green",
+        "hull_olive",
+        "hull_black"
+      ]
+    },
+    {
+      "id": "bolar_carrier",
+      "displayName": "Bolar carrier",
+      "displayNameJa": "ボラー空母",
+      "faction": "bolar",
+      "shipClass": "Bolar carrier",
+      "role": "carrier",
+      "obj": "bolar_carrier.obj",
+      "mtl": "bolar_carrier.mtl",
+      "lengthM": 400,
+      "beamM": 110,
+      "triangles": 4056,
+      "groups": [
+        "hull",
+        "superstructure",
+        "bridge",
+        "wave_motion_gun",
+        "engine_nozzle",
+        "wing",
+        "radiator",
+        "ciws_1",
+        "ciws_2",
+        "ciws_3",
+        "ciws_4",
+        "turret_main_1",
+        "turret_main_2",
+        "turret_main_3"
+      ],
+      "hardpoints": [
+        {
+          "name": "wave_motion_gun",
+          "kind": "wmgun",
+          "pos": [
+            0.0,
+            1.0,
+            -188.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_1",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            14.0,
+            -120.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_2",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            14.0,
+            -80.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_main_3",
+          "kind": "turret",
+          "pos": [
+            0.0,
+            14.0,
+            -40.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_1",
+          "kind": "turret",
+          "pos": [
+            26.207,
+            9.2,
+            -128.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "turret_secondary_2",
+          "kind": "turret",
+          "pos": [
+            -26.207,
+            9.2,
+            -128.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            44.0,
+            14.0,
+            -104.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            -44.0,
+            14.0,
+            -104.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            44.0,
+            14.0,
+            64.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -44.0,
+            14.0,
+            64.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "engine_1",
+          "kind": "thruster",
+          "pos": [
+            -30.8,
+            -2.0,
+            189.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_2",
+          "kind": "thruster",
+          "pos": [
+            -11.0,
+            -2.0,
+            189.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_3",
+          "kind": "thruster",
+          "pos": [
+            11.0,
+            -2.0,
+            189.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "engine_4",
+          "kind": "thruster",
+          "pos": [
+            30.8,
+            -2.0,
+            189.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        }
+      ],
+      "materials": [
+        "deck_dark",
+        "glass_blue",
+        "engine_glow",
+        "gun_metal",
+        "hull_white",
+        "hull_black",
+        "bolar_blue"
+      ]
+    }
+  ]
+}

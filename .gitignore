@@ -1,0 +1,20 @@
+# Python bytecode from the asset generator
+__pycache__/
+*.pyc
+
+# Generated geometry is reproducible from tools/gen_models.py, but it is
+# committed on purpose so the demo runs from a clean clone without Python.
+# Uncomment the next line if you prefer to regenerate it at build time.
+# assets/models/*.obj
+# assets/models/*.mtl
+
+# Reference frames captured from third-party videos for ANALYSIS ONLY.
+# They are deliberately NOT redistributed: the README claims this repository
+# ships no third-party art, and 19 frames grabbed from a bilibili fan animation
+# would contradict that. docs/research/03-reference-video-analysis.md records
+# every measurement taken from them, which is what the code actually depends on.
+docs/research/img/
+
+# Local scratch
+.DS_Store
+*.log
