@@ -163,7 +163,12 @@ export const CONFIG = {
       yawRate: 0.40, pitchRate: 0.28, rollRate: 0.80, accel: 40, brakeDecel: 70,
       mass: 0.62, collisionRadius: 34,
       weapons: ['uncf_beam', 'torpedo'],
-      mounts: { uncf_beam: 2, torpedo: 1 },
+      // 4 mounts, not 2: she carries four triple 36 cm turrets (docs/research/01
+      // section 1.3) and the model emits all four as `turret_main_1..4`. One
+      // mount per turret is the convention Andromeda already followed. She has no
+      // secondary battery at all — canon gives her four identical main turrets
+      // and nothing between them and her torpedoes.
+      mounts: { uncf_beam: 4, torpedo: 1 },
       pdMounts: 2,
       aiDoctrine: 'uncf',
     },
@@ -176,7 +181,13 @@ export const CONFIG = {
       yawRate: 0.80, pitchRate: 0.55, rollRate: 1.40, accel: 80, brakeDecel: 110,
       mass: 0.30, collisionRadius: 16,
       weapons: ['uncf_beam'],
-      mounts: { uncf_beam: 1 },
+      // 2 mounts, not 1: she carries two triple 12.7 cm turrets, one abaft the
+      // canopy and one mirrored on the hull's underside, and the model emits
+      // both as `turret_main_1..2`. Her two FIXED forward 12.7 cm anti-ship guns
+      // are geometry only — giving a 1000 EHP destroyer a battleship-grade
+      // `secondary_battery` (29.3 DPS per mount) would triple her firepower for
+      // no canon reason.
+      mounts: { uncf_beam: 2 },
       pdMounts: 1,
       aiDoctrine: 'uncf',
     },

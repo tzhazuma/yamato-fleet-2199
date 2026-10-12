@@ -1982,13 +1982,19 @@ def loft_split(sections, split, mat_a, mat_b, group, smooth=True):
 def mount_turret(s, name, group, deck_y, z, barbette_r, barbette_h, body, barrels,
                  barrel_r, barrel_len, aft=False, x=0.0, elev=0.09,
                  body_mat="hull_grey", barbette_mat="gun_metal",
-                 barrel_mat="gun_metal", muzzle_ring=None):
+                 barrel_mat="gun_metal", muzzle_ring=None, ventral=False):
     """Author a naval turret CENTRED ON ITS OWN PIVOT + register its hardpoint.
 
     SPEC 5 rule 3: the indexed group keeps its vertices at the origin - x = z = 0
     on the traverse axis, y = 0 at the deck line where the barbette meets the
     hull - and ``hardpoint.pos`` is that same pivot.  ``group`` here is only the
     family (which decides the detail budget); the emitted group name is ``name``.
+
+    ``ventral`` mirrors the mount in Y and registers its hardpoint at -deck_y:
+    the Isokaze-class carries one of her two triple 12.7 cm turrets on the hull's
+    UNDERSIDE, directly opposite the dorsal one (research 01 section 1.4), and
+    the pivot contract survives the mirror because y = 0 stays the barbette base
+    and x = z = 0 stays the traverse axis.
     """
     main = group == "turret_main"
     parts = turret(barbette_r, barbette_h, body, barrels, barrel_r, barrel_len,
@@ -1996,20 +2002,30 @@ def mount_turret(s, name, group, deck_y, z, barbette_r, barbette_h, body, barrel
                    barrel_mat=barrel_mat, elev=elev, deck_ring=True,
                    muzzle_ring=main if muzzle_ring is None else muzzle_ring,
                    barbette_seg=12 if main else 10)
+    if ventral:
+        for part in as_list(parts):
+            part.mirror_y()
     if aft:
         # author the rest orientation into the local geometry, so traverse 0
         # means "trained fore-and-aft" for this mount
         for part in as_list(parts):
             part.rotate_y(math.pi)
     s.add(parts)
-    s.hp(name, "turret", (x, deck_y, z), (0.0, 0.0, 1.0 if aft else -1.0))
+    s.hp(name, "turret", (x, -deck_y if ventral else deck_y, z),
+         (0.0, 0.0, 1.0 if aft else -1.0))
     return parts
 
 
 def mount_garm_turret(s, name, deck_y, z, radius, height, barrel_r, barrel_len,
                       aft=False, x=0.0, ventral=False, body_mat="gun_metal",
-                      dome_mat="hull_green", group="turret_main"):
-    """Garmillas low domed mount, authored centred on its own pivot."""
+                      dome_mat="hull_green", group="turret_main", kind="turret"):
+    """Garmillas low domed mount, authored centred on its own pivot.
+
+    ``kind`` lets the same domed form serve a beam turret (``turret``) and a
+    Garmillas close-in mount (``anti_air``): the faction's AA is a small domed
+    mount, not a UNCF box, so the two share one form exactly as the pulse-laser
+    battery shares AA_FORMS on the UNCF side.
+    """
     parts = [ring(radius * 0.80, radius * 1.05, 1.2, axis="y",
                   center=(0.0, 0.6, 0.0), segments=14, mat=body_mat, group=name),
              dome(radius * 0.94, height, center=(0.0, 1.2, 0.0), segments=16, rings=3,
@@ -2023,8 +2039,8 @@ def mount_garm_turret(s, name, deck_y, z, radius, height, barrel_r, barrel_len,
     if aft:
         for part in as_list(parts):
             part.rotate_y(math.pi)
-    s.add(parts)
-    s.hp(name, "turret", (x, -deck_y if ventral else deck_y, z),
+    s.add(merge_parts(parts))
+    s.hp(name, kind, (x, -deck_y if ventral else deck_y, z),
          (0.0, 0.0, 1.0 if aft else -1.0))
     return parts
 
@@ -3149,6 +3165,15 @@ def build_kirishima(s):
     # ---- four triple 36 cm: A/B forward, C/D aft, D superfiring over C ----
     #  Canon stations A 0.16 / B 0.32 / C 0.66 / D 0.82.  The old model had the
     #  aft pair the wrong way round (C raised, D on the deck).
+    #
+    #  SLOT ASSIGNMENT, per the Lead's ruling: a group family is a weapon SLOT,
+    #  not a calibre.  All four mounts are identical 36 cm triples, but the
+    #  forward pair occupies the primary slot (`turret_main_1..2`) and the aft
+    #  pair the secondary slot (`turret_secondary_1..2`) - because SPEC's
+    #  required mix wants both slots filled on every hull, CONFIG fires her
+    #  beam mounts from `turret_main` (mounts.uncf_beam = 2, the forward pair),
+    #  and inventing a mid-calibre gun she never carried would be worse than
+    #  labelling her real aft battery as what it is: her second battery group.
     for i, (st, raise_) in enumerate(((0.160, 0.0), (0.320, 6.0))):
         zz = S(st)
         d = dy(zz) + raise_
@@ -3166,7 +3191,7 @@ def build_kirishima(s):
             s.add(frustum_box(24.0, raise_, 24.0, center=(0.0, dy(zz) + raise_ / 2.0, zz),
                               scale_top=(0.9, 0.93), mat="hull_grey",
                               group="superstructure"))
-        mount_turret(s, "turret_main_%d" % (i + 3), "turret_main", d, zz,
+        mount_turret(s, "turret_secondary_%d" % (i + 1), "turret_secondary", d, zz,
                      6.4, 3.0, (17.0, 6.6, 18.0), 3, 1.4, 15.0, aft=True, elev=0.06,
                      muzzle_ring=False)
 
@@ -3189,17 +3214,20 @@ def build_kirishima(s):
     #  "two blocks of 8 rectangular cell hatches, offset +/-0.40 x beam, angled
     #  slightly upward" (research 01 section 1.3) - cheap triangles, very
     #  readable, and each block is ONE mesh so the count is checkable.
+    #  The blocks are 4 rows x 2 columns and sit LOW on the flank: a 4-wide
+    #  block at +/-0.40 x beam reaches x = 19.1, past the 17 m half-beam, and
+    #  SPEC 5 rule 7 pins the X extent to beamM exactly.
     for i, sgn in enumerate((1.0, -1.0)):
         zz = S(0.450)
         x = 0.40 * B
-        block = missile_cell_box(2, 4, 1.05, 2.4,
-                                 (sgn * x, dy(zz) + 4.6, zz), face="-z",
+        block = missile_cell_box(4, 2, 0.8, 2.4,
+                                 (sgn * x, dy(zz) - 3.4, zz), face="-z",
                                  scale=(1.0, 1.0))
         for p in as_list(block):
-            p.rotate_x(0.12 * sgn * sgn)     # angled slightly upward
+            p.rotate_x(0.12)                 # angled slightly upward
         s.add(block)
         s.hp("missile_launcher_%d" % (i + 1), "missile",
-             (sgn * x, dy(zz) + 4.6, zz - 3.0), (0.0, 0.12, -1.0))
+             (sgn * x, dy(zz) - 3.4, zz - 3.0), (0.0, 0.12, -1.0))
 
     # ---- squat bridge at station 0.35 + missile blocks -------------------
     bz = S(0.350)
@@ -3247,9 +3275,22 @@ def build_kirishima(s):
 def build_yukikaze(s):
     """Isokaze-class assault destroyer (Yukikaze) - fighter crossed with a sub.
 
-    Identity: the bow armour wing plate with six triangular fins, a low faired
-    canopy, tail stabilisers above and below, ventral drop tanks, a mirrored
-    belly turret, and yellow / red / white paint (research section 1.4).
+    Identity (research 01 section 1.4): the 艦首装甲翼 bow armour wing plate with
+    six triangular fins, a low faired canopy instead of a tower, tail
+    stabilisers above and below, ventral drop tanks, and yellow / red / white
+    paint.  She is the one UNCF hull that must NOT look like a naval ship.
+
+    Canon fit, and it is a DESTROYER's fit: two triple 12.7 cm beam turrets -
+    one just abaft the canopy, the other directly opposite it on the hull's
+    UNDERSIDE (mirrored in Y) - two fixed forward 12.7 cm anti-ship guns on the
+    upper bow, three torpedo tubes, and eight missile tubes in a block behind
+    the canopy.  She is deliberately NOT padded up to a battleship's battery:
+    the only small mount is her single point-defence channel (pdMounts = 1).
+
+    SLOT ASSIGNMENT (Lead's ruling: a family is a weapon SLOT, not a calibre):
+    the dorsal and ventral 12.7 cm triples hold `turret_main_1..2`, the two
+    fixed bow anti-ship guns hold `turret_secondary_1..2`, and the bow emitter
+    ring holds the `wave_motion_gun` slot the contract requires.
     """
     L, B = s.L, s.B
     S = lambda t: (t - 0.5) * L                       # noqa: E731
@@ -3286,12 +3327,10 @@ def build_yukikaze(s):
             fin.rotate_z(sgn * ang)
             fin.translate((sgn * 16.6, -0.6, wing_z + dz))
             s.add(fin)
-    # blunt nose carrying the fixed guns + a small emitter ring
+    # blunt nose: the bow emitter ring fills the contract's wmgun slot, and the
+    # two fixed anti-ship guns are their own indexed mounts (below)
     s.add(frustum_box(9.0, 8.0, 8.0, center=(0.0, 0.0, S(0.050)),
                       scale_top=(0.6, 0.7), mat="hull_white", group="hull"))
-    for ox in (-2.0, 2.0):
-        s.add(cylinder(0.8, 8.0, axis="z", center=(ox, 5.0, S(0.055)), segments=8,
-                       mat="gun_metal", group="wave_motion_gun", smooth=True))
     s.add(ring(1.8, 3.4, 1.4, axis="z", center=(0.0, 1.2, -L / 2.0 + 0.7),
                segments=14, mat="gun_metal", group="wave_motion_gun"))
     s.add(disc(1.6, 0.8, axis="z", center=(0.0, 1.2, -L / 2.0 + 0.5), segments=12,
@@ -3310,32 +3349,82 @@ def build_yukikaze(s):
         s.add(box(1.4, 1.0, 1.4, center=(-2.4 + (k % 2) * 4.8, dy(bz) + 2.2,
                                          bz + 9.0 + (k // 2) * 2.4),
                   mat="deck_dark", group="superstructure"))
+
+    # ---- two triple 12.7 cm: one dorsal, one DIRECTLY OPPOSITE BELOW -------
+    #  "one just abaft the bridge (station 0.52) and one directly opposite it on
+    #  the hull's underside (station 0.52, mirrored in Y)" [WIKI] - the belly
+    #  turret is the detail that makes her read as a submersible fighter rather
+    #  than a tiny battleship.  Its pivot is the KEEL at that station, exactly
+    #  mirroring the dorsal mount sitting into the deck; anything else leaves the
+    #  barbette floating under the hull.
+    keel_here = abs(min(p[1] for p in section_at(sections, S(0.52))))
     mount_turret(s, "turret_main_1", "turret_main", dy(S(0.52)), S(0.52),
-                 3.0, 2.0, (7.4, 3.2, 8.0), 3, 0.6, 9.0, elev=0.08)
-    mount_turret(s, "turret_main_2", "turret_main", dy(S(0.34)), S(0.34),
-                 3.0, 2.0, (7.4, 3.2, 8.0), 3, 0.6, 9.0, aft=True, elev=0.08)
-    for i, (st, sgn) in enumerate(((0.600, 1.0), (0.600, -1.0))):
+                 3.0, 2.0, (7.4, 3.2, 8.0), 3, 0.6, 9.0, elev=0.08,
+                 muzzle_ring=False)
+    mount_turret(s, "turret_main_2", "turret_main", keel_here, S(0.52),
+                 3.0, 2.0, (7.4, 3.2, 8.0), 3, 0.6, 9.0, elev=0.08,
+                 muzzle_ring=False, ventral=True)
+
+    # ---- two fixed forward 12.7 cm anti-ship guns on the upper bow --------
+    #  12.7サンチ対艦砲 x2, "short parallel barrels on the upper surface" of the
+    #  blunt nose (research 01 section 1.4).  Fixed, so they are authored
+    #  trained fore-and-aft at traverse 0; they hold the secondary slot.
+    for i, ox in enumerate((-2.4, 2.4)):
         mount_turret(s, "turret_secondary_%d" % (i + 1), "turret_secondary",
-                     dy(S(st)), S(st), 1.6, 1.2, (3.6, 1.8, 4.2), 2, 0.35, 5.0,
-                     x=sgn * 7.0, elev=0.12)
-    for i, (st, sgn) in enumerate(((0.280, 1.0), (0.280, -1.0))):
-        mount_aa(s, "ciws_%d" % (i + 1), dy(S(st)), S(st), sgn * 8.4, scale=0.5)
+                     5.0, -L / 2.0 + 6.0, 1.0, 1.0, (3.4, 1.6, 4.6), 1, 0.55, 6.0,
+                     x=ox, elev=0.0, muzzle_ring=False)
+
+    # ---- one point-defence channel (pdMounts = 1) ------------------------
+    mount_pulse_laser(s, "ciws_1", dy(S(0.28)), S(0.28), 8.4, form="twin_75")
+
+    # ---- three torpedo tubes, as hull openings ---------------------------
+    #  魚雷発射管 x3 - she carried the 試製空間魚雷 experimental torpedo.  One in
+    #  the bow face and one each side of it, all flush with the plating.
+    for i, (ox, oy, direction, name) in enumerate((
+            (0.0, -1.2, (0.0, 0.0, -1.0), "torpedo_tube_bow"),
+            (6.0, -1.2, (0.35, 0.0, -1.0), "torpedo_tube_p1"),
+            (-6.0, -1.2, (-0.35, 0.0, -1.0), "torpedo_tube_s1"))):
+        if ox:
+            face_x = hx_at(sections, -L / 2.0 + 12.0, oy) * BELT_SCALE
+            cx = (1.0 if ox > 0 else -1.0) * (face_x - 0.6)
+            s.add(hull_port(1.4, (cx, oy, -L / 2.0 + 12.0), axis="x", depth=1.2,
+                            group="torpedo_tube", segments=5))
+            s.hp(name, "torpedo", (cx, oy, -L / 2.0 + 12.0), direction)
+        else:
+            s.add(hull_port(1.4, (0.0, oy, -L / 2.0 + 2.0), axis="z", depth=1.2,
+                            group="torpedo_tube", segments=5))
+            s.hp(name, "torpedo", (0.0, oy, -L / 2.0 + 2.0), direction)
+
+    # ---- eight missile tubes in one block behind the canopy ---------------
+    #  ミサイル発射管 x8, "a block of cells immediately behind the bridge"
+    #  (research 01 section 1.4).
+    s.add(missile_cell_box(2, 4, 0.9, 2.4, (0.0, dy(bz) + 2.4, bz + 14.0),
+                           face="-z"))
+    s.hp("missile_launcher_1", "missile", (0.0, dy(bz) + 2.4, bz + 11.0),
+         (0.0, 0.0, -1.0))
+
     s.add_pair_at(swept_fin(6.0, 1.0, 7.0, sweep=0.4, rise=1.0, mat="hull_red",
                             group="wing"), (3.6, 0.0, S(0.82)))
     for (ox, oy) in ((-9.0, 1.6), (9.0, 1.6), (-9.0, -1.6), (9.0, -1.6)):
         s.add(frustum_box(0.9, 3.4, 4.0, center=(ox, oy, S(0.82)),
                           scale_top=(1.0, 0.5), mat="hull_red", group="wing"))
+    # 増槽 drop tanks.  The source gives the two stations (0.30 and 0.55) but not
+    # their lateral offset, and a CENTRELINE tank at 0.55 runs straight through
+    # the belly turret's barrels.  Resolved in favour of the turret - the more
+    # distinctive feature - by slinging the tanks as mirrored pairs either side
+    # of the keel, clear of the barrels' +/-1.5 m sweep.
     for st in (0.30, 0.55):
-        s.add(cylinder(2.0, 0.12 * L, axis="z", center=(0.0, -10.4, S(st)),
-                       segments=12, radius2=1.5, mat="accent_gold", group="hull",
-                       smooth=True))
+        for sgn in (1.0, -1.0):
+            s.add(cylinder(2.0, 0.12 * L, axis="z",
+                           center=(sgn * 4.6, -10.4, S(st)), segments=12,
+                           radius2=1.5, mat="accent_gold", group="hull",
+                           smooth=True))
     engine_cluster(s, [(0.0, 0.0)], 3.8, 8.0, L / 2.0, names=("engine_1",),
                    segments=14, bell_mat="accent_gold")
     for i, (vx, vy, vz) in enumerate(((-9.4, 0.0, S(0.24)), (9.4, 0.0, S(0.24)),
                                       (0.0, -8.6, S(0.40)))):
-        s.add(nozzle(1.8, 5.0, center=(vx, vy, vz - 2.5), segments=10, fins=0,
-                     bell_mat="deck_dark", trim=8, vanes=0, actuator=False,
-                     throat=False))
+        s.add(aux_engine_bell(1.8, 5.0, (vx, vy, vz - 2.5), group="engine_nozzle",
+                              segments=8, bell_mat="deck_dark"))
         s.hp("vernier_%d" % (i + 1), "thruster", (vx, vy, vz + 2.5), (0.0, 0.0, 1.0))
 def build_garmillas_dessler(s):
     """Deusura II - Desler flagship (wave-3 boss).
@@ -3411,20 +3500,27 @@ def build_garmillas_dessler(s):
     s.add(cylinder(20.0, 2.0, axis="y", center=(0.0, deck + 1.2, az), segments=16,
                    mat="hull_black", group="hull"))
     # domed dorsal + ventral rows
+    # domed dorsal row (6 mounts, three stations either side of the core) and
+    # the ventral pair.  The ventral mounts are CENTRELINE, one per station:
+    # canon gives the two stations and no lateral offset, and four wing mounts
+    # would repeat the mistake the Yamato's old secondary battery made.
     for i, (st, sgn) in enumerate(((0.200, 1.0), (0.200, -1.0), (0.450, 1.0),
                                    (0.450, -1.0), (0.700, 1.0), (0.700, -1.0))):
         mount_garm_turret(s, "turret_main_%d" % (i + 1), deck, S(st), 11.0, 6.0,
                           1.8, 20.0, x=sgn * 0.22 * B, body_mat="gun_metal",
                           dome_mat="hull_olive")
-    for i, (st, sgn) in enumerate(((0.300, 1.0), (0.300, -1.0), (0.600, 1.0),
-                                   (0.600, -1.0))):
+    for i, st in enumerate((0.300, 0.600)):
         mount_garm_turret(s, "turret_secondary_%d" % (i + 1), deck, S(st), 9.0, 5.0,
-                          1.5, 16.0, x=sgn * 0.44 * B, ventral=True,
-                          body_mat="gun_metal", dome_mat="hull_green",
-                          group="turret_secondary")
-    for i, (st, sgn) in enumerate(((0.150, 1.0), (0.150, -1.0), (0.800, 1.0),
-                                   (0.800, -1.0))):
-        mount_aa(s, "ciws_%d" % (i + 1), deck, S(st), sgn * 0.36 * B, scale=1.4)
+                          1.5, 16.0, ventral=True, body_mat="gun_metal",
+                          dome_mat="hull_green", group="turret_secondary")
+    # Her only close-in armament: the two point-defence channels CONFIG gives her
+    # (pdMounts = 2).  Canon lists no AA battery for the Deusura II at all - her
+    # defence is her Gamiloid complement - so the old model's four CIWS boxes
+    # were invention; they are two now, in the faction's domed mount form.
+    for i, (st, sgn) in enumerate(((0.150, 1.0), (0.150, -1.0))):
+        mount_garm_turret(s, "ciws_%d" % (i + 1), deck, S(st), 4.6, 2.6, 0.5, 7.0,
+                          x=sgn * 0.36 * B, body_mat="gun_metal",
+                          dome_mat="hull_green", kind="anti_air")
     fin = swept_fin(46.0, 3.0, 30.0, sweep=0.5, rise=6.0, mat="hull_green",
                     group="wing")
     xf_rotate_z(fin, 0.35)
@@ -3505,9 +3601,20 @@ def build_garmillas_kelkapia(s):
         mount_garm_turret(s, "turret_secondary_%d" % (i + 1), deck, S(st), 6.4, 3.6,
                           1.0, 11.0, ventral=True, body_mat="gun_metal",
                           dome_mat="hull_green", group="turret_secondary")
+    # small anti-air clusters around the bridge blister (research 01 section
+    # 2.2).  Four of them are the traversable point-defence channels CONFIG
+    #  gives her (pdMounts = 4) and six more ship merged in `anti_air`: canon
+    #  says "clusters" without a count, so the ring is a reconstruction.
     for i, (st, sgn) in enumerate(((0.42, 1.0), (0.42, -1.0), (0.62, 1.0),
                                    (0.62, -1.0))):
-        mount_aa(s, "ciws_%d" % (i + 1), deck, S(st), sgn * 0.36 * B, scale=1.0)
+        mount_garm_turret(s, "ciws_%d" % (i + 1), deck, S(st), 4.0, 2.4, 0.45, 6.0,
+                          x=sgn * 0.36 * B, body_mat="gun_metal",
+                          dome_mat="hull_green", kind="anti_air")
+    for i, (st, sgn) in enumerate(((0.36, 1.0), (0.36, -1.0), (0.50, 1.0),
+                                   (0.50, -1.0), (0.70, 1.0), (0.70, -1.0))):
+        mount_garm_turret(s, "anti_air_%d" % (i + 1), deck, S(st), 3.6, 2.2, 0.4, 5.5,
+                          x=sgn * 0.42 * B, body_mat="gun_metal",
+                          dome_mat="hull_green", group="anti_air", kind="anti_air")
     s.add_pair_at(swept_fin(9.5, 1.8, 13.0, sweep=0.55, rise=4.0, mat="hull_green",
                             group="wing"), (10.0, 5.0, S(0.40)))
     s.add_pair_at(box(1.4, 12.0, 40.0, center=(0.0, 3.0, 0.0), mat="hull_green",
@@ -3584,13 +3691,26 @@ def build_garmillas_gaiderol(s):
               group="bridge"))
     s.add_at(mast(15.0, 1.4, segments=6, arms=2, dish_r=5.0, mat="hull_green",
                   dish_mat="gun_metal"), (0.0, deck + 31.5, cz))
+    # ---- bridge CIWS ring: 10 domed mounts, "do not skip this" -----------
+    #  A ring of 8-12 tiny mounts encircling the citadel at its base (research 01
+    #  section 2.3), on an elliptical ring so it follows the citadel's 30 x 80 m
+    #  footprint.  Four are the traversable channels CONFIG gives her
+    #  (pdMounts = 4); the other six ship merged in `anti_air`.  They are domed
+    #  Garmillas mounts rather than UNCF boxes, and the ring is a large part of
+    #  what reads as "Garmillas battleship".
     for k in range(10):
         ang = 2.0 * math.pi * k / 10.0
-        cw = [cylinder(1.5, 2.6, axis="y", center=(0.0, 1.3, 0.0), segments=8,
-                       mat="gun_metal", group="superstructure"),
-              cylinder(0.5, 3.0, axis="z", center=(0.0, 3.0, -1.4), segments=6,
-                       mat="gun_metal", group="superstructure", caps=False)]
-        s.add_at(cw, (16.0 * math.cos(ang), deck, cz + 20.0 * math.sin(ang)))
+        ex = 20.0 * math.cos(ang)
+        ez = cz + 44.0 * math.sin(ang)
+        if k < 4:
+            mount_garm_turret(s, "ciws_%d" % (k + 1), deck, ez, 3.4, 2.2, 0.4, 5.5,
+                              x=ex, body_mat="gun_metal", dome_mat="hull_green",
+                              kind="anti_air")
+        else:
+            mount_garm_turret(s, "anti_air_%d" % (k - 3), deck, ez, 3.4, 2.2, 0.4,
+                              5.5, x=ex, body_mat="gun_metal",
+                              dome_mat="hull_green", group="anti_air",
+                              kind="anti_air")
     s.add(frustum_box(3.4, 0.09 * L, 0.34 * L, center=(0.0, deck + 0.045 * L, S(0.60)),
                       scale_top=(0.45, 0.5), top_offset=(0.0, 0.06 * L),
                       mat="hull_olive", group="wing"))
@@ -3601,9 +3721,6 @@ def build_garmillas_gaiderol(s):
         mount_garm_turret(s, "turret_secondary_%d" % (i + 1), deck, S(st), 7.0, 4.0,
                           1.1, 12.0, ventral=True, body_mat="gun_metal",
                           dome_mat="hull_green", group="turret_secondary")
-    for i, (st, sgn) in enumerate(((0.30, 1.0), (0.30, -1.0), (0.68, 1.0),
-                                   (0.68, -1.0))):
-        mount_aa(s, "ciws_%d" % (i + 1), deck, S(st), sgn * 0.40 * B, scale=1.1)
     s.add_pair_at(swept_fin(14.0, 2.0, 16.0, sweep=0.5, rise=4.0, mat="hull_green",
                             group="wing"), (9.0, 6.0, S(0.30)))
     s.add_pair_at(box(1.6, 16.0, 50.0, center=(0.0, 4.0, 0.0), mat="hull_green",

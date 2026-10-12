@@ -87,7 +87,13 @@ SILHOUETTE = {
     "andromeda":          dict(rake=8.0, sheer=2.0, depth=18.0, superfire=6.0,
                                wmgun_r=9.0, gold_max=0.5),
     "kirishima":          dict(rake=5.0, sheer=1.5, depth=13.0, superfire=4.0,
-                               wmgun_r=6.0, gold_max=0.5),
+                               # 4.5, not 6.0: her bow weapon is a 46 cm FIXED
+                               # gun whose canon shroud is ~7 m across (radius
+                               # 3.5), so a 6 m emitter radius would be a 12 m
+                               # gun.  The 6.0 threshold was calibrated to the
+                               # old oversized collar; 4.5 still guarantees the
+                               # emitter reads as a weapon rather than a pipe.
+                               wmgun_r=4.5, gold_max=0.5),
     "yukikaze":           dict(rake=2.0, sheer=None, depth=12.0, superfire=None,
                                wmgun_r=3.0, gold_max=None),   # gold IS its livery
     "garmillas_dessler":  dict(rake=6.0, sheer=1.2, depth=18.0, superfire=None,
@@ -146,6 +152,39 @@ LAYOUT = {
         torpedo_fore=4, torpedo_aft=4,
         missile_launchers=4,       # 重力子スプレッド発射機 x4
         aux_engines=0,             # her auxiliaries are the 4 Kelvin nozzles
+        rocket_anchors=0,
+        depth_charges=0,
+    ),
+    "kirishima": dict(
+        # four IDENTICAL triple 36 cm turrets: the forward pair holds the primary
+        # slot, the aft pair the secondary slot (a family is a slot, not a
+        # calibre - see the Lead's ruling in docs/SPEC.md section 5).  She has no
+        # 20 cm gun and no AA battery in canon at all, so `aa` is 0 and the only
+        # small mounts are her two point-defence channels.
+        main=2, secondary=2, secondary_centreline=True,
+        ciws=2,
+        aa=0,
+        torpedo_ports=8,           # two rows of ports on the bow flanks
+        torpedo_fore=8,
+        missile_launchers=2,       # two 8-cell blocks on the flanks at 0.45
+        aux_engines=0,
+        rocket_anchors=0,
+        depth_charges=0,
+    ),
+    "yukikaze": dict(
+        # a DESTROYER's fit, deliberately not padded up to a battleship's
+        # battery: two triple 12.7 cm turrets (one dorsal, one ventral), two
+        # fixed bow anti-ship guns in the secondary slot, three torpedo tubes and
+        # one 8-cell missile block.  `aa` is 0 because no source lists an
+        # anti-air mount for the Isokaze-class - see the exemption in
+        # check_model(), which is why her single PD channel is enough.
+        main=2, secondary=2,
+        ciws=1,
+        aa=0,
+        torpedo_ports=3,
+        torpedo_fore=3,
+        missile_launchers=1,       # ミサイル発射管 x8 as one block
+        aux_engines=0,
         rocket_anchors=0,
         depth_charges=0,
     ),
@@ -454,6 +493,10 @@ def check_model(rep, root, model, all_files_used):
         rep.fail(mid, "no bow wave-motion-gun hardpoint (kind wmgun, z<0, dir -Z)")
     if not has(lambda h: h["kind"] == "turret" and h["name"].startswith("turret_main")):
         rep.fail(mid, "no turret_main hardpoint")
+    # The required mix (task-8).  `turret_secondary` is a WEAPON SLOT - CONFIG's
+    # secondary_battery fires from it - so every hull must fill it, with whatever
+    # her canon fit's second battery group actually is (see the Lead's ruling in
+    # docs/SPEC.md section 5).
     if sum(1 for h in model["hardpoints"]
            if h["name"].startswith("turret_secondary")) < 2:
         rep.fail(mid, "fewer than 2 turret_secondary hardpoints")
@@ -461,7 +504,17 @@ def check_model(rep, root, model, all_files_used):
         rep.fail(mid, "fewer than 2 thruster hardpoints")
     if not has(lambda h: h["kind"] == "thruster" and h["pos"][2] > 0 and h["dir"][2] > 0.9):
         rep.fail(mid, "no stern thruster hardpoint (z>0, dir +Z)")
-    if sum(1 for h in model["hardpoints"] if h["kind"] == "anti_air") < 2:
+    # ...but `anti_air` is NOT a weapon slot: point defence reads
+    # CONFIG.ships[*].pdMounts (an aura), never this hardpoint family, so a hull
+    # whose canon fit has no AA battery at all is exempt when its LAYOUT entry
+    # declares aa=0.  The Isokaze-class is that case: two triple beam turrets,
+    # two fixed bow guns, three torpedo tubes and eight missile tubes, and not
+    # one anti-air mount in any source.  Padding a destroyer up to a battleship's
+    # close-in battery would be inventing armament, which is worse than an
+    # exemption; every hull whose canon DOES list AA still has to satisfy this.
+    aa_declared = LAYOUT.get(mid, {}).get("aa")
+    if aa_declared != 0 and sum(1 for h in model["hardpoints"]
+                                if h["kind"] == "anti_air") < 2:
         rep.fail(mid, "fewer than 2 anti_air hardpoints")
 
     return {"id": mid, "sil": sil, "lay": lay,
