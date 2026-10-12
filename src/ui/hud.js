@@ -172,17 +172,28 @@ const CSS = `
 .yfh-wrow.is-wmg .yfh-wbar { height: 6px; }
 .yfh-wrow.is-wmg .yfh-wbar i { background: linear-gradient(90deg, #2f8fd0, #bff0ff); box-shadow: 0 0 6px rgba(150, 235, 255, .5); }
 
-/* ── firing-direction indicator ──────────────────────────────────────── */
-.yfh-arc { position: absolute; inset: 0; opacity: 0; transition: opacity .18s ease; }
-.yfh-arc.show { opacity: 1; }
-.yfh-arc-wedge {
-  position: absolute; inset: 0; background: var(--c-arc-in);
-  clip-path: polygon(0 0, 0 0, 0 0);
-}
-.yfh-arc.is-out .yfh-arc-wedge { background: var(--c-arc-out); }
-.yfh-arc-edge { position: absolute; height: 1px; transform-origin: 0 50%; background: var(--c-arc-in); opacity: .9; }
-.yfh-arc.is-out .yfh-arc-edge { background: var(--c-arc-out); }
-.yfh-arc-axis { position: absolute; height: 1px; transform-origin: 0 50%; background: var(--c-arc-axis); opacity: .55; }
+/* ── firing-direction indicator ──────────────────────────────────────────
+   DO NOT go back to a full-viewport <div> with an "opacity" transition
+   wrapping a full-viewport child with "clip-path". That combination promotes
+   the element to its own compositing layer, and in Chrome it blanked the WebGL
+   canvas underneath across the whole layer bounds — a large black rectangle
+   over the scene, which the user reported as "莫名其妙的黑色遮挡" and which
+   also hid the enemy ships. It is now an SVG whose polygon is repainted each
+   frame: no clip-path anywhere, and no opacity on a full-screen element, so
+   nothing is promoted and the canvas composites normally.
+   ─────────────────────────────────────────────────────────────────────── */
+.yfh-arc { position: absolute; inset: 0; visibility: hidden; pointer-events: none; }
+.yfh-arc.show { visibility: visible; }
+.yfh-arc-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.yfh-arc-wedge { fill: var(--c-arc-in); }
+.yfh-arc.is-out .yfh-arc-wedge { fill: var(--c-arc-out); }
+.yfh-arc-edge { stroke: var(--c-arc-in); stroke-width: 1.5; }
+.yfh-arc.is-out .yfh-arc-edge { stroke: var(--c-arc-out); }
+.yfh-arc-axis { stroke: var(--c-arc-axis); stroke-width: 1; opacity: .55; }
+/* Weapon-range ring: the WoW-style "this is how far this weapon reaches" circle. */
+.yfh-range { fill: none; stroke: var(--c-arc-in); stroke-width: 1.2; opacity: .38; }
+.yfh-arc.is-out .yfh-range { stroke: var(--c-arc-out); opacity: .30; }
+.yfh-range-far { fill: none; stroke: var(--c-arc-axis); stroke-width: 1; opacity: .22; }
 .yfh-mounts { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; transition: opacity .18s ease; }
 .yfh-mounts.show { opacity: 1; }
 .yfh-tick {
@@ -562,10 +573,24 @@ export class Hud {
     // firing-arc cone — behind the reticle so it can never hide the crosshair
     const arc = make(doc, 'div', 'yfh-arc', root);
     this.el.arc = arc;
-    this.el.arcWedge = make(doc, 'div', 'yfh-arc-wedge', arc);
-    this.el.arcEdgeL = make(doc, 'div', 'yfh-arc-edge', arc);
-    this.el.arcEdgeR = make(doc, 'div', 'yfh-arc-edge', arc);
-    this.el.arcAxis = make(doc, 'div', 'yfh-arc-axis', arc);
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = doc.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'yfh-arc-svg');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    const svgEl = (tag, cls) => {
+      const e = doc.createElementNS(NS, tag);
+      if (cls) e.setAttribute('class', cls);
+      svg.appendChild(e);
+      return e;
+    };
+    // Draw order: the two range rings, then the cone, then its edges and axis.
+    this.el.rangeFar = svgEl('polygon', 'yfh-range-far');
+    this.el.range = svgEl('polygon', 'yfh-range');
+    this.el.arcWedge = svgEl('polygon', 'yfh-arc-wedge');
+    this.el.arcEdgeL = svgEl('line', 'yfh-arc-edge');
+    this.el.arcEdgeR = svgEl('line', 'yfh-arc-edge');
+    this.el.arcAxis = svgEl('line', 'yfh-arc-axis');
+    arc.appendChild(svg);
 
     // centre reticle — small, bow-pointing crosshair
     const ret = make(doc, 'div', 'yfh-reticle', root);
@@ -1181,6 +1206,49 @@ export class Hud {
   }
 
   /** Position + rotate a 1px line element between two screen points. */
+  /** Set an SVG attribute, guarding against a missing element. */
+  _attr(el, name, value) {
+    if (el && el.setAttribute) el.setAttribute(name, value);
+  }
+
+  /** Position an SVG <line> from a to b, in screen pixels. */
+  _svgLine(el, a, b) {
+    if (!el || !a || !b) return;
+    this._attr(el, 'x1', a.x.toFixed(1));
+    this._attr(el, 'y1', a.y.toFixed(1));
+    this._attr(el, 'x2', b.x.toFixed(1));
+    this._attr(el, 'y2', b.y.toFixed(1));
+  }
+
+  /**
+   * Project a horizontal circle of `radius` around `centre` into screen space
+   * and set it as an SVG polygon. `radius <= 0` clears the ring.
+   */
+  _svgRing(el, centre, up, radius, camera, size) {
+    if (!el) return;
+    if (!(radius > 0) || !centre || !camera) { this._attr(el, 'points', ''); return; }
+    const N = 40;
+    // Build two in-plane axes from the ship's up vector.
+    const ux = num(up && up.x, 0), uy = num(up && up.y, 1), uz = num(up && up.z, 0);
+    const ax = -uz, az = ux;                       // horizontal, perpendicular to up
+    const al = Math.hypot(ax, az) || 1;
+    const e1x = ax / al, e1z = az / al;
+    const e2x = -uy * e1z, e2y = uz * e1x - ux * e1z, e2z = uy * e1x;
+    const out = [];
+    for (let i = 0; i < N; i++) {
+      const t = (i / N) * Math.PI * 2;
+      const c = Math.cos(t) * radius, sn = Math.sin(t) * radius;
+      const p = this._project({
+        x: centre.x + e1x * c + e2x * sn,
+        y: centre.y + e2y * sn,
+        z: centre.z + e1z * c + e2z * sn,
+      }, camera, size.w, size.h);
+      if (!p || p.behind) { this._attr(el, 'points', ''); return; }
+      out.push(p);
+    }
+    this._attr(el, 'points', out.map((q) => q.x.toFixed(1) + ',' + q.y.toFixed(1)).join(' '));
+  }
+
   _line(el, a, b) {
     if (!el) return;
     const dx = b.x - a.x, dy = b.y - a.y;
@@ -1261,13 +1329,17 @@ export class Hud {
     const inRange = (sol && typeof sol.inRange === 'boolean') ? sol.inRange : true;
     setClass(arcEl, 'is-out', !(inArc && inRange));
     setClass(arcEl, 'show', true);
-    setStyle(this.el.arcWedge, 'clip-path',
-      'polygon(' + pApex.x.toFixed(1) + 'px ' + pApex.y.toFixed(1) + 'px, '
-      + pL.x.toFixed(1) + 'px ' + pL.y.toFixed(1) + 'px, '
-      + pR.x.toFixed(1) + 'px ' + pR.y.toFixed(1) + 'px)');
-    this._line(this.el.arcEdgeL, pApex, pL);
-    this._line(this.el.arcEdgeR, pApex, pR);
-    this._line(this.el.arcAxis, pApex, pAxis);
+    const pts = (arr) => arr.map((q) => q.x.toFixed(1) + ',' + q.y.toFixed(1)).join(' ');
+    this._attr(this.el.arcWedge, 'points', pts([pApex, pL, pR]));
+    this._svgLine(this.el.arcEdgeL, pApex, pL);
+    this._svgLine(this.el.arcEdgeR, pApex, pR);
+    this._svgLine(this.el.arcAxis, pApex, pAxis);
+    // Range rings, WoW-style: the circle the SELECTED weapon can reach, drawn on
+    // the ship's plane, plus the wave motion gun's far ring for scale.
+    this._svgRing(this.el.range, player.position, up, maxRange, world.camera, size);
+    const wmRange = num(CONFIG?.weapons?.wmgun?.range, 0);
+    this._svgRing(this.el.rangeFar, player.position, up,
+      wmRange > maxRange * 1.2 ? wmRange : 0, world.camera, size);
 
     this._syncMounts(player);
     this._syncLead(world, sol);

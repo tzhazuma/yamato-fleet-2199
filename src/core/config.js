@@ -76,6 +76,28 @@ export const CONFIG = {
 
   audio: { master: 0.7, music: 0.0, sfx: 0.85 },
 
+  // ---------------------------------------------------------------------------
+  // HUD — every value src/ui/** reads, so nothing is hardcoded in the UI layer.
+  // ---------------------------------------------------------------------------
+  ui: {
+    // Half-angle used to DRAW the firing arc. A real 150 deg traverse fan covers
+    // the whole screen and reads as a flat wash rather than a cone, so the drawn
+    // fan is clamped. The TRUE arc is always reported numerically (the weapons
+    // panel shows "3/3 BEARING", the target panel shows IN/OUT OF ARC), so the
+    // clamp never hides whether a shot will actually leave the barrel.
+    arcMaxDisplayDeg: 26,
+    colors: {
+      arcIn: 'rgba(120, 255, 170, 0.17)',
+      arcOut: 'rgba(255, 150, 90, 0.16)',
+      arcAxis: 'rgba(200, 235, 255, 0.5)',
+      lead: 'rgba(255, 214, 130, 0.95)',
+      mountReady: 'rgba(150, 255, 190, 0.95)',
+      mountSlew: 'rgba(255, 214, 130, 0.9)',
+      mountBlocked: 'rgba(255, 120, 90, 0.85)',
+      mountGhost: 'rgba(150, 175, 205, 0.35)',
+    },
+  },
+
   keys: {
     throttleUp: ['KeyW', 'ArrowUp'],
     throttleDown: ['KeyS', 'ArrowDown'],

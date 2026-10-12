@@ -154,6 +154,12 @@ const bootStatus = document.getElementById('boot-status');
 function progress(pct, text) {
   if (bootBar) bootBar.style.width = `${clamp(pct, 0, 100)}%`;
   if (bootStatus && text) bootStatus.textContent = text;
+  // Mirror the stage into the document title. If a boot stage ever hangs the
+  // page, the tab title still reports the last stage that COMPLETED, which is
+  // readable without executing any script in the frozen page.
+  if (typeof document !== 'undefined') {
+    document.title = `[${Math.round(clamp(pct, 0, 100))}%] ${text || ''}`;
+  }
 }
 
 let world = null;
