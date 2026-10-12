@@ -59,11 +59,33 @@ Requirements: Node ≥ 20 (only to run the static server and the tests), Python 
 | `G` | Secondary battery |
 | `F` | Torpedo salvo (4 torpedoes, homing) |
 | `R` | **Wave motion gun** — hold to charge, release to fire |
+| `T` | **Toggle firing mode** — `MANUAL` (手動射撃) or `AUTO` (自動射撃) |
+| `B` | Cycle which weapon's firing arc the HUD draws and leads with |
 | `Tab` | Cycle target |
 | `C` | Cycle camera (chase / orbit / cinematic) |
 | `Z` | Radar zoom |
 | `P` | Pause · `M` Mute |
 | `Enter` | Restart after victory/defeat |
+
+**Firing modes.** In `MANUAL` you pull the trigger (`Space` / `G` / `F`, hold `R`).
+In `AUTO` the guns fire themselves whenever a locked target is inside the
+weapon's arc and range, and the wave motion gun charges and releases on its own
+once it is fully charged and aligned. Manual keys still work as an override in
+either mode.
+
+**Reading the firing-arc indicator.** A translucent cone is projected from your
+bow showing the selected weapon's traverse arc — green when the locked target is
+inside it, amber when it is not. A 40-segment ring is drawn on your ship's plane
+at that weapon's maximum range (plus the wave motion gun's far ring for scale),
+so "can I reach it" is a circle you can see rather than a number you have to
+remember. Each traversable mount also gets a tick around the reticle showing its
+current bearing, and the weapons panel reports `n/N BEARING` per weapon — so a
+trigger pull that does nothing reads as an ARC problem rather than a bug.
+
+The drawn cone is clamped to a 52° fan by `CONFIG.ui.arcMaxDisplayDeg`; a real
+150° traverse fan would cover the screen and read as a flat wash instead of a
+cone. The TRUE arc is always reported numerically, so the clamp can never hide
+whether a shot will actually leave the barrel.
 
 Add `?debug=1` to the URL for verbose event logging and a shortened wave-motion
 gun charge (useful when testing).
