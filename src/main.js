@@ -442,6 +442,19 @@ export async function boot() {
 
   progress(100, '準備完了 / ready');
   setTimeout(() => bootEl?.classList.add('hidden'), 260);
+  // Guarantee the boot screen actually goes away.
+  //
+  // `.hidden` only starts a CSS opacity transition. A throttled or backgrounded
+  // tab can stall that transition indefinitely — observed stuck at opacity 0.84
+  // over a fully playable game, which reads as "the demo is broken" even though
+  // the simulation is running underneath. So after the fade has had its chance,
+  // remove the element from layout outright rather than trusting the transition.
+  setTimeout(() => {
+    if (!bootEl) return;
+    const o = parseFloat(getComputedStyle(bootEl).opacity);
+    if (!(o <= 0.02)) bootEl.style.display = 'none';
+  }, 1400);
+  setTimeout(() => { if (bootEl) bootEl.style.display = 'none'; }, 2600);
 
   // Expose for debugging, automated verification and console poking.
   window.__YAMATO__ = world;

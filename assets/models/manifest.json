@@ -17,7 +17,7 @@
       "mtl": "yamato.mtl",
       "lengthM": 333,
       "beamM": 48,
-      "triangles": 10940,
+      "triangles": 11668,
       "groups": [
         "hull",
         "superstructure",
@@ -26,19 +26,23 @@
         "engine_nozzle",
         "wing",
         "radiator",
+        "anti_air",
+        "torpedo_tube",
+        "missile_launcher",
+        "third_bridge",
+        "catapult",
+        "rocket_anchor",
+        "aux_engine",
+        "depth_charge",
         "ciws_1",
         "ciws_2",
         "ciws_3",
         "ciws_4",
-        "ciws_5",
-        "ciws_6",
         "turret_main_1",
         "turret_main_2",
         "turret_main_3",
         "turret_secondary_1",
-        "turret_secondary_2",
-        "turret_secondary_3",
-        "turret_secondary_4"
+        "turret_secondary_2"
       ],
       "hardpoints": [
         {
@@ -56,12 +60,68 @@
           ]
         },
         {
+          "name": "missile_launcher_bow_1",
+          "kind": "missile",
+          "pos": [
+            8.2,
+            7.6,
+            -165.0
+          ],
+          "dir": [
+            0.177153,
+            0.0,
+            -0.984183
+          ]
+        },
+        {
+          "name": "missile_launcher_bow_2",
+          "kind": "missile",
+          "pos": [
+            -8.2,
+            7.6,
+            -165.0
+          ],
+          "dir": [
+            -0.177153,
+            0.0,
+            -0.984183
+          ]
+        },
+        {
+          "name": "rocket_anchor_1",
+          "kind": "thruster",
+          "pos": [
+            9.765,
+            16.382,
+            -137.013
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "rocket_anchor_2",
+          "kind": "thruster",
+          "pos": [
+            -9.765,
+            16.382,
+            -137.013
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
           "name": "turret_main_1",
           "kind": "turret",
           "pos": [
             0.0,
-            17.339,
-            -118.215
+            17.474,
+            -124.0
           ],
           "dir": [
             0.0,
@@ -74,8 +134,8 @@
           "kind": "turret",
           "pos": [
             0.0,
-            23.387,
-            -74.925
+            24.0,
+            -94.0
           ],
           "dir": [
             0.0,
@@ -88,8 +148,8 @@
           "kind": "turret",
           "pos": [
             0.0,
-            20.12,
-            99.9
+            20.0,
+            93.24
           ],
           "dir": [
             0.0,
@@ -101,9 +161,9 @@
           "name": "turret_secondary_1",
           "kind": "turret",
           "pos": [
-            15.592,
-            15.176,
-            -28.305
+            0.0,
+            24.0,
+            -73.0
           ],
           "dir": [
             0.0,
@@ -115,51 +175,23 @@
           "name": "turret_secondary_2",
           "kind": "turret",
           "pos": [
-            -15.592,
-            15.176,
-            -28.305
+            0.0,
+            19.572,
+            48.0
           ],
           "dir": [
             0.0,
             0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_3",
-          "kind": "turret",
-          "pos": [
-            16.39,
-            14.773,
-            48.285
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_4",
-          "kind": "turret",
-          "pos": [
-            -16.39,
-            14.773,
-            48.285
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
+            1.0
           ]
         },
         {
           "name": "ciws_1",
           "kind": "anti_air",
           "pos": [
-            13.108,
-            16.868,
-            -101.565
+            18.5,
+            24.0,
+            -72.0
           ],
           "dir": [
             0.0,
@@ -171,9 +203,9 @@
           "name": "ciws_2",
           "kind": "anti_air",
           "pos": [
-            -13.108,
-            16.868,
-            -101.565
+            -18.5,
+            24.0,
+            -72.0
           ],
           "dir": [
             0.0,
@@ -185,9 +217,9 @@
           "name": "ciws_3",
           "kind": "anti_air",
           "pos": [
-            17.829,
-            14.776,
-            0.0
+            11.5,
+            20.522,
+            38.0
           ],
           "dir": [
             0.0,
@@ -199,42 +231,574 @@
           "name": "ciws_4",
           "kind": "anti_air",
           "pos": [
-            -17.829,
-            14.776,
+            -11.5,
+            20.522,
+            38.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_1",
+          "kind": "torpedo",
+          "pos": [
+            13.061,
+            2.0,
+            -131.148
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_1_s",
+          "kind": "torpedo",
+          "pos": [
+            -13.061,
+            2.0,
+            -131.148
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_2",
+          "kind": "torpedo",
+          "pos": [
+            14.192,
+            2.0,
+            -120.206
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_2_s",
+          "kind": "torpedo",
+          "pos": [
+            -14.192,
+            2.0,
+            -120.206
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_3",
+          "kind": "torpedo",
+          "pos": [
+            15.31,
+            2.0,
+            -109.97
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_3_s",
+          "kind": "torpedo",
+          "pos": [
+            -15.31,
+            2.0,
+            -109.97
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_1",
+          "kind": "torpedo",
+          "pos": [
+            18.353,
+            2.0,
+            121.934
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_1_s",
+          "kind": "torpedo",
+          "pos": [
+            -18.353,
+            2.0,
+            121.934
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_2",
+          "kind": "torpedo",
+          "pos": [
+            17.225,
+            2.0,
+            131.076
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_2_s",
+          "kind": "torpedo",
+          "pos": [
+            -17.225,
+            2.0,
+            131.076
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_3",
+          "kind": "torpedo",
+          "pos": [
+            16.005,
+            2.0,
+            140.574
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_3_s",
+          "kind": "torpedo",
+          "pos": [
+            -16.005,
+            2.0,
+            140.574
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_p1",
+          "kind": "torpedo",
+          "pos": [
+            18.776,
+            -1.0,
+            -70.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s1",
+          "kind": "torpedo",
+          "pos": [
+            -18.776,
+            -1.0,
+            -70.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p2",
+          "kind": "torpedo",
+          "pos": [
+            20.28,
+            -1.0,
+            -50.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s2",
+          "kind": "torpedo",
+          "pos": [
+            -20.28,
+            -1.0,
+            -50.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p3",
+          "kind": "torpedo",
+          "pos": [
+            21.353,
+            -1.0,
+            -30.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s3",
+          "kind": "torpedo",
+          "pos": [
+            -21.353,
+            -1.0,
+            -30.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p4",
+          "kind": "torpedo",
+          "pos": [
+            22.717,
+            -1.0,
+            30.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s4",
+          "kind": "torpedo",
+          "pos": [
+            -22.717,
+            -1.0,
+            30.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p5",
+          "kind": "torpedo",
+          "pos": [
+            22.511,
+            -1.0,
+            52.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s5",
+          "kind": "torpedo",
+          "pos": [
+            -22.511,
+            -1.0,
+            52.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p6",
+          "kind": "torpedo",
+          "pos": [
+            21.67,
+            -1.0,
+            74.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s6",
+          "kind": "torpedo",
+          "pos": [
+            -21.67,
+            -1.0,
+            74.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p7",
+          "kind": "torpedo",
+          "pos": [
+            20.388,
+            -1.0,
+            96.0
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s7",
+          "kind": "torpedo",
+          "pos": [
+            -20.388,
+            -1.0,
+            96.0
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_p8",
+          "kind": "torpedo",
+          "pos": [
+            18.527,
+            -1.0,
+            115.907
+          ],
+          "dir": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "torpedo_tube_s8",
+          "kind": "torpedo",
+          "pos": [
+            -18.527,
+            -1.0,
+            115.907
+          ],
+          "dir": [
+            -1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_1",
+          "kind": "missile",
+          "pos": [
+            6.0,
+            -13.635,
+            -20.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_2",
+          "kind": "missile",
+          "pos": [
+            -6.0,
+            -13.635,
+            -20.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_3",
+          "kind": "missile",
+          "pos": [
+            6.0,
+            -13.671,
             0.0
           ],
           "dir": [
             0.0,
-            0.0,
-            -1.0
+            -1.0,
+            0.0
           ]
         },
         {
-          "name": "ciws_5",
-          "kind": "anti_air",
+          "name": "missile_launcher_ventral_4",
+          "kind": "missile",
           "pos": [
-            14.426,
-            15.49,
-            114.885
+            -6.0,
+            -13.671,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_5",
+          "kind": "missile",
+          "pos": [
+            6.0,
+            -13.692,
+            20.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_6",
+          "kind": "missile",
+          "pos": [
+            -6.0,
+            -13.692,
+            20.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_7",
+          "kind": "missile",
+          "pos": [
+            6.0,
+            -13.646,
+            40.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_8",
+          "kind": "missile",
+          "pos": [
+            -6.0,
+            -13.646,
+            40.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_9",
+          "kind": "missile",
+          "pos": [
+            6.0,
+            -13.599,
+            60.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_ventral_10",
+          "kind": "missile",
+          "pos": [
+            -6.0,
+            -13.599,
+            60.0
+          ],
+          "dir": [
+            0.0,
+            -1.0,
+            0.0
+          ]
+        },
+        {
+          "name": "missile_launcher_box",
+          "kind": "missile",
+          "pos": [
+            0.0,
+            22.022,
+            24.0
           ],
           "dir": [
             0.0,
             0.0,
-            -1.0
+            1.0
           ]
         },
         {
-          "name": "ciws_6",
-          "kind": "anti_air",
+          "name": "missile_launcher_funnel",
+          "kind": "missile",
           "pos": [
-            -14.426,
-            15.49,
-            114.885
+            0.0,
+            28.571,
+            -15.55
           ],
           "dir": [
             0.0,
             0.0,
-            -1.0
+            1.0
           ]
         },
         {
@@ -258,6 +822,34 @@
             9.6,
             0.0,
             156.5
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "aux_engine_1",
+          "kind": "thruster",
+          "pos": [
+            18.5,
+            6.0,
+            160.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "name": "aux_engine_2",
+          "kind": "thruster",
+          "pos": [
+            -18.5,
+            6.0,
+            160.0
           ],
           "dir": [
             0.0,

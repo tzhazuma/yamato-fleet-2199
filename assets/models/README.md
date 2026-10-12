@@ -38,8 +38,9 @@ X extent == `beamM`, the 12 000-triangle budget and the hardpoint rules.
 | Ship local space | bow **-Z**, up **+Y**, origin at the ship's centre (mid-length, centreline, mid-height of the hull) |
 | Files | one `<id>.obj` + one `<id>.mtl` per ship, ASCII, no textures |
 | Faces | triangles and quads only; `vn` normals written (per face when flat, per vertex when smooth) |
-| Groups | fixed: `hull`, `superstructure`, `bridge`, `wave_motion_gun`, `engine_nozzle`, `wing`, `radiator`; indexed mounts: `turret_main_1..N`, `turret_secondary_1..N`, `ciws_1..N` (SPEC §5 rule 3) |
+| Groups | fixed: `hull`, `superstructure`, `bridge`, `wave_motion_gun`, `engine_nozzle`, `wing`, `radiator`; merged 2199 parts: `anti_air`, `torpedo_tube`, `missile_launcher`, `third_bridge`, `catapult`, `rocket_anchor`, `aux_engine`, `depth_charge`; indexed mounts: `turret_main_1..N`, `turret_secondary_1..N`, `ciws_1..N` (SPEC §5 rule 3) |
 | Mount pivots | an indexed group's name IS its manifest hardpoint name and its geometry is authored **centred on its own pivot** - x = z = 0 on the traverse axis, y = 0 at the deck line where the barbette meets the hull. The renderer does `mesh.position = hardpoint.pos` then `mesh.rotation.y = <traverse>` (0 = trained fore-and-aft), so the turrets traverse individually |
+| Merged groups | a part that does NOT rotate takes a merged group, never an indexed one: a torpedo port is a hole in the plating, and naming it `torpedo_tube_3` would drag it into the pivot contract (and correctly fail it). Its direction lives in the hardpoint `dir` |
 | Materials | names are the frozen SPEC section 5.5 palette; the *values* are per-ship faction colours taken from `docs/research/01-yamato-ships.md` |
 | Budget | under 12 000 triangles per ship |
 
@@ -47,7 +48,7 @@ X extent == `beamM`, the 12 000-triangle budget and the hardpoint rules.
 
 | id | name | JA | faction | class | lengthM | beamM | triangles | groups | hardpoints |
 |---|---|---|---|---|---|---|---|---|---|
-| `yamato` | Yamato (BBY-01) | ヤマト | uncf | Yamato-class | 333 | 48 | 10940 | 20 | 16 |
+| `yamato` | Yamato (BBY-01) | ヤマト | uncf | Yamato-class | 333 | 48 | 11668 | 24 | 58 |
 | `andromeda` | Andromeda (AAA-01) | アンドロメダ | uncf | Andromeda-class | 444 | 62 | 11988 | 21 | 21 |
 | `kirishima` | Kirishima (CCV-05) | 霧島 | uncf | Kongo-class (refit) | 205 | 34 | 8872 | 20 | 18 |
 | `yukikaze` | Yukikaze (DD-117) | 雪風 | uncf | Isokaze-class | 80 | 38 | 4628 | 12 | 11 |
@@ -72,12 +73,36 @@ consumer must take from the manifest rather than hardcoding.
 |---|---|
 | `wmgun` | bow wave-motion-gun / heavy beam emitter (named `wave_motion_gun`) |
 | `turret` | main and secondary gun mounts (`turret_main_*`, `turret_secondary_*`) |
-| `thruster` | stern engine bells (`engine_*`, dir +Z) |
-| `anti_air` | close-in pulse-laser mounts (`anti_air_*`) |
+| `thruster` | stern engine bells and the auxiliary engines (`engine_*`, `aux_engine_*`, dir +Z) |
+| `anti_air` | pulse-laser mounts (`ciws_*`, individually traversable) |
+| `torpedo` | hull torpedo tubes (`torpedo_tube_*`), openings in the plating |
+| `missile` | missile launchers (`missile_launcher_*`), ventral tubes and box/funnel cells |
 
 Every ship carries a bow `wave_motion_gun` emitter, centreline `turret_main`
 mounts, at least two `turret_secondary` and two `anti_air` mounts, and stern
 `engine_*` bells.
+
+### Yamato armament layout (task-9 rebuild)
+
+`yamato` is rebuilt against `docs/research/05-yamato-armament-layout.md`, and
+`tools/validate_models.py` now asserts the counts from the file itself:
+
+* **3** triple 48 cm main turrets - two forward superfiring, one aft.
+* **2** triple 20 cm secondary turrets, both on the **centreline**.  The old
+  model carried four triple WING mounts, which is what made the ship read as
+  the wrong ship.
+* **40** pulse-laser mounts of five types plus the two conning-tower firearms:
+  4 ship as the traversable `ciws_1..4` (that is `CONFIG.ships.yamato.pdMounts`,
+  a balance number) and the other 38 as the merged `anti_air` battery.
+* **28** torpedo tubes as hull openings: 6 fore, 6 aft, 8 per side.
+* **12** missile launchers: 10 ventral tubes in the keel, the eight-barrel box on
+  the aft deckhouse, and the funnel launcher (煙突ミサイル).
+* the **third bridge** (第三艦橋) hangs BELOW the hull under the command tower,
+  the two auxiliary engines flank the main bells, and the aft aircraft deck
+  carries the catapult and its elevator.
+* the main wings are modelled **folded** against the flanks: SPEC §5 rule 7 pins
+  the model's X extent to `beamM`, so a deployed 60 m delta wing would break the
+  contract for every consumer that reads `beamM`.
 
 ## Surface detail (task-7 pass)
 
@@ -105,9 +130,15 @@ painted band and the raised seams - not the bare hull - land exactly on
 
 ## Faction identity (what to look for)
 
-* **UNCF** - grey hulls with a red waterline band and cyan drive glow. Yamato:
-  flat blunt bow face with a recessed circular WM-gun muzzle, pagoda bridge at
-  station 0.30, three triple turrets (2 fore / 1 aft). Andromeda: broad flat bow
+* **UNCF** - grey hulls with a red waterline band and cyan drive glow. Yamato
+  (2199 rebuild): raked clipper bow with the WM-gun muzzle proud of it and
+  missile ports flanking it, rocket anchors either side, three triple 48 cm
+  turrets (2 fore superfiring / 1 aft), **two centreline 20 cm triples**, a
+  pagoda tower whose **third bridge hangs below the hull**, a funnel that is
+  itself a missile launcher, 28 torpedo ports flush in the plating, the 40-mount
+  pulse-laser battery in sponsons along both flanks, folded delta main wings,
+  two auxiliary engine bells and the aft aircraft deck with its catapult.
+  Andromeda: broad flat bow
   with **twin** WM-gun muzzles, four triple turrets, one large + four medium
   nozzles. Kirishima: a fixed gun **barrel protruding** from the bow, squat
   bridge at station 0.35. Yukikaze: the 艦首装甲翼 bow armour wing - a flat plate

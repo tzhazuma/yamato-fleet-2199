@@ -47,13 +47,22 @@ TURRET_GROUPS = ("turret_main", "turret_secondary", "ciws", "missile_launcher",
 TURRET_RE = re.compile(r"^(%s)_\d+$" % "|".join(TURRET_GROUPS))
 
 GROUPS = ("hull", "superstructure", "bridge", "wave_motion_gun", "engine_nozzle",
-          "turret_main", "turret_secondary", "wing", "radiator")
+          "turret_main", "turret_secondary", "wing", "radiator",
+          # 2199 armament-layout groups (docs/research/05-yamato-armament-layout.md).
+          # These are MERGED groups, not indexed mounts: a torpedo port or a
+          # ventral missile tube never rotates, so it must not take an indexed
+          # name (see TURRET_RE above) or the pivot contract would demand a
+          # traverse axis it does not have.
+          "anti_air", "torpedo_tube", "missile_launcher", "third_bridge",
+          "catapult", "rocket_anchor", "aux_engine", "depth_charge")
 
 MATERIALS = ("hull_grey", "hull_red", "deck_dark", "glass_blue", "engine_glow",
              "gun_metal", "accent_gold", "hull_green", "hull_olive", "hull_white",
              "hull_black", "bolar_blue")
 
-HARDPOINT_KINDS = ("wmgun", "turret", "thruster", "anti_air")
+#: ``torpedo`` / ``missile`` are the kinds src/core/assets.js synthesises for the
+#: tube and launcher families, so an authored hardpoint uses the same names.
+HARDPOINT_KINDS = ("wmgun", "turret", "thruster", "anti_air", "torpedo", "missile")
 
 REQUIRED_IDS = ("yamato", "andromeda", "kirishima", "yukikaze",
                 "garmillas_dessler", "garmillas_kelkapia",
@@ -89,6 +98,34 @@ SILHOUETTE = {
                                wmgun_r=7.0, gold_max=0.5),
     "bolar_carrier":      dict(rake=4.0, sheer=None, depth=18.0, superfire=None,
                                wmgun_r=6.0, gold_max=0.5),
+}
+
+
+#: Canon ARMAMENT LAYOUT per hull (docs/research/05-yamato-armament-layout.md).
+#: These are the counts the user could see were wrong: four wing secondaries
+#: instead of two centreline triples, torpedo tubes modelled as turrets, six CIWS
+#: against canon's forty, and no third bridge at all.  ``meshes`` counts are
+#: measured from the OBJ by face connectivity (see count_meshes) - the generator
+#: emits one Part per mount, so a mesh IS a mount.
+#:
+#: A hull with no entry here is checked against the generic contract only, which
+#: is how the other seven hulls migrate: one at a time, each gaining its entry as
+#: it is rebuilt.
+LAYOUT = {
+    "yamato": dict(
+        main=3, secondary=2, secondary_centreline=True,
+        ciws=4,                    # traversable point-defence mounts (pdMounts)
+        aa=38,                     # merged battery: 36 pulse lasers + 2 tower guns
+        torpedo_ports=28,          # 6 fore + 6 aft + 8 per side broadside
+        torpedo_fore=6, torpedo_aft=6, torpedo_broadside=16,
+        missile_launchers=12,      # 10 ventral tubes + the box + the funnel
+        ventral_tubes=10,
+        aux_engines=2,
+        third_bridge=True,         # must protrude BELOW the hull
+        catapult=True,
+        rocket_anchors=2,
+        depth_charges=2,
+    ),
 }
 
 
@@ -355,6 +392,9 @@ def check_model(rep, root, model, all_files_used):
     # -- silhouette (structural facts, task-8) -----------------------------
     sil = silhouette_checks(rep, mid, model, obj)
 
+    # -- armament layout (canon counts, task-9) ----------------------------
+    lay = layout_checks(rep, mid, model, obj)
+
     # -- hardpoints --------------------------------------------------------
     names = []
     kinds = []
@@ -401,7 +441,7 @@ def check_model(rep, root, model, all_files_used):
     if sum(1 for h in model["hardpoints"] if h["kind"] == "anti_air") < 2:
         rep.fail(mid, "fewer than 2 anti_air hardpoints")
 
-    return {"id": mid, "sil": sil,
+    return {"id": mid, "sil": sil, "lay": lay,
             "display": model["displayName"], "faction": model["faction"],
             "cls": model["shipClass"], "role": model["role"], "obj": model["obj"],
             "mtl": model["mtl"], "L": L, "B": B, "tris": tris, "quads": quads,
@@ -529,6 +569,244 @@ def silhouette_checks(rep, mid, model, obj):
     return out
 
 
+def group_components(obj, group, touch=0.5):
+    """Bounding boxes of the separate objects in one OBJ group.
+
+    The OBJ carries no structure below the ``g`` group, so mounts in a MERGED
+    battery have to be counted from the geometry.  Two rules, in order:
+
+    1. FACE CONNECTIVITY - two vertices are in the same object when a face
+       references both.  This finds each primitive (a box, a cylinder).
+    2. PROXIMITY - primitives whose bounding boxes come within ``touch`` metres
+       are the same object.  A mount is a pedestal + a gun house + a barrel
+       cluster: its parts touch, while two mounts down a deckhouse row are 10 m
+       apart with ~4.6 m of barrel between them, so 0.5 m separates the cases
+       cleanly.
+
+    tools/gen_models.py emits one Part per mount and spaces the battery rows
+    accordingly, so the result IS the mount count - which is what makes "38
+    pulse-laser mounts" checkable at all.
+    """
+    faces = [idx for (g, _m, idx, _hn) in obj["faces"] if g == group]
+    if not faces:
+        return 0
+    verts = obj["verts"]
+    parent = {}
+
+    def find(a):
+        parent.setdefault(a, a)
+        root = a
+        while parent[root] != root:
+            root = parent[root]
+        while parent[a] != root:              # path compression
+            parent[a], a = root, parent[a]
+        return root
+
+    for idx in faces:
+        first = find(idx[0])
+        for i in idx[1:]:
+            r = find(i)
+            if r != first:
+                parent[r] = first
+
+    boxes = {}
+    for idx in faces:
+        root = find(idx[0])
+        box = boxes.get(root)
+        for i in idx:
+            x, y, z = verts[i]
+            if box is None:
+                box = boxes[root] = [x, y, x, y, z, z]
+                continue
+            box[0] = min(box[0], x)
+            box[1] = min(box[1], y)
+            box[2] = max(box[2], x)
+            box[3] = max(box[3], y)
+            box[4] = min(box[4], z)
+            box[5] = max(box[5], z)
+    roots = sorted(boxes)
+    for i, a in enumerate(roots):
+        ba = boxes[a]
+        for b in roots[i + 1:]:
+            bb = boxes[b]
+            if (ba[0] - touch <= bb[2] and bb[0] - touch <= ba[2]
+                    and ba[1] - touch <= bb[3] and bb[1] - touch <= ba[3]
+                    and ba[4] - touch <= bb[5] and bb[4] - touch <= ba[5]):
+                ra, rb = find(a), find(b)
+                if ra != rb:
+                    parent[rb] = ra
+                    boxes[ra] = [min(ba[0], bb[0]), min(ba[1], bb[1]),
+                                 max(ba[2], bb[2]), max(ba[3], bb[3]),
+                                 min(ba[4], bb[4]), max(ba[5], bb[5])]
+                    ba = boxes[ra]
+    return [boxes[r] for r in sorted({find(i) for idx in faces for i in idx})]
+
+
+def count_meshes(obj, group, touch=0.5, below=None):
+    """How many objects one group holds, optionally only those below a height.
+
+    ``below`` is how the ventral missile tubes are counted: the same measurement,
+    restricted to the launchers whose whole bounding box hangs under the keel.
+    """
+    boxes = group_components(obj, group, touch)
+    if below is None:
+        return len(boxes)
+    return sum(1 for b in boxes if b[3] < below)          # b[3] is max y
+
+
+def group_verts(obj, group):
+    return obj["group_verts"].get(group, [])
+
+
+def layout_checks(rep, mid, model, obj):
+    """Assert the CANON armament layout of a rebuilt hull, and return the counts.
+
+    Everything here is measured from the OBJ (mesh counts, directions, heights)
+    or from the manifest hardpoints (world positions, which the merged groups do
+    not carry).  A hull with no LAYOUT entry is skipped: this is the migration
+    path for the other seven.
+    """
+    spec = LAYOUT.get(mid)
+    out = {}
+    if not spec:
+        return out
+    L = float(model["lengthM"])
+    hps = model["hardpoints"]
+    by_name = {h.get("name"): h for h in hps}
+    prefix = lambda p: [h for h in hps if str(h.get("name", "")).startswith(p)]
+
+    out["main"] = len(prefix("turret_main_"))
+    out["secondary"] = len(prefix("turret_secondary_"))
+    out["ciws"] = len(prefix("ciws"))
+    out["aa"] = count_meshes(obj, "anti_air")
+    out["torpedo_ports"] = count_meshes(obj, "torpedo_tube")
+    out["missile_launchers"] = count_meshes(obj, "missile_launcher")
+    out["aux_engines"] = count_meshes(obj, "aux_engine")
+    out["rocket_anchors"] = count_meshes(obj, "rocket_anchor")
+    out["depth_charges"] = count_meshes(obj, "depth_charge")
+    out["catapult"] = count_meshes(obj, "catapult")
+    out["third_bridge"] = count_meshes(obj, "third_bridge")
+
+    # -- main / secondary battery -----------------------------------------
+    if out["main"] != spec["main"]:
+        rep.fail(mid, "layout: %d turret_main mounts, canon has %d"
+                 % (out["main"], spec["main"]))
+    if out["secondary"] != spec["secondary"]:
+        rep.fail(mid, "layout: %d turret_secondary mounts, canon has %d "
+                      "centreline triples - wing secondaries are the error the "
+                      "user spotted" % (out["secondary"], spec["secondary"]))
+    if spec.get("secondary_centreline"):
+        off = [h for h in prefix("turret_secondary")
+               if abs(h["pos"][0]) > 1.0]
+        if off:
+            rep.fail(mid, "layout: secondary mount(s) %s are %.1f m off the "
+                          "centreline - canon mounts them on the centreline"
+                     % (", ".join(h["name"] for h in off),
+                        max(abs(h["pos"][0]) for h in off)))
+    if out["ciws"] != spec["ciws"]:
+        rep.fail(mid, "layout: %d traversable ciws mounts, expected %d "
+                      "(CONFIG.ships.pdMounts)" % (out["ciws"], spec["ciws"]))
+
+    # -- the pulse-laser battery ------------------------------------------
+    if out["aa"] != spec["aa"]:
+        rep.fail(mid, "layout: anti_air group holds %d mounts, canon has %d "
+                      "(40 pulse lasers + 2 conning-tower firearms, of which %d "
+                      "are the traversable ciws mounts)"
+                 % (out["aa"], spec["aa"], spec["ciws"]))
+    aa_lo = [v[1] for v in group_verts(obj, "anti_air")]
+    if aa_lo and min(aa_lo) < 0.0:
+        rep.fail(mid, "layout: an anti_air mount sits at y=%.1f - the battery "
+                      "belongs on the UPPER hull, only the wave motion gun, the "
+                      "bow/stern missiles and the third bridge are elsewhere"
+                 % min(aa_lo))
+
+    # -- torpedo ports: hull openings, and their directions ----------------
+    if out["torpedo_ports"] != spec["torpedo_ports"]:
+        rep.fail(mid, "layout: %d torpedo ports modelled, canon has %d"
+                 % (out["torpedo_ports"], spec["torpedo_ports"]))
+    tubes = prefix("torpedo_tube")
+    if len(tubes) != out["torpedo_ports"]:
+        rep.fail(mid, "layout: %d torpedo_tube hardpoints for %d modelled ports - "
+                      "the ports and the tubes that fire through them disagree"
+                 % (len(tubes), out["torpedo_ports"]))
+    fore = [h for h in tubes if h["dir"][2] < -0.9]
+    aft = [h for h in tubes if h["dir"][2] > 0.9]
+    broad = [h for h in tubes if abs(h["dir"][0]) > 0.9]
+    out["torpedo_fore"], out["torpedo_aft"] = len(fore), len(aft)
+    out["torpedo_broadside"] = len(broad)
+    for key, got in (("torpedo_fore", len(fore)), ("torpedo_aft", len(aft)),
+                     ("torpedo_broadside", len(broad))):
+        if got != spec[key]:
+            rep.fail(mid, "layout: %d %s torpedo tubes, canon has %d"
+                     % (got, key.split("_")[1], spec[key]))
+    # a port is a hole in the plating, so the hardpoint must sit ON the hull
+    # surface rather than out in space where a turret would have been
+    xs = [abs(v[0]) for v in group_verts(obj, "torpedo_tube")]
+    if xs and max(xs) > 0.5 * float(model["beamM"]) + 0.05:
+        rep.fail(mid, "layout: a torpedo port reaches x=%.2f, past the hull's "
+                      "own beam - ports must be flush with the plating"
+                 % max(xs))
+
+    # -- missiles ----------------------------------------------------------
+    if out["missile_launchers"] != spec["missile_launchers"]:
+        rep.fail(mid, "layout: %d missile launcher meshes, canon has %d "
+                      "(10 ventral tubes + 1 eight-barrel launcher + the funnel)"
+                 % (out["missile_launchers"], spec["missile_launchers"]))
+    # the ventral tubes are the launchers that hang under the keel; the box
+    # launcher and the funnel cells are on the upper hull, so a height cut
+    # separates the two groups cleanly
+    ventral = count_meshes(obj, "missile_launcher", below=-6.0)
+    out["ventral_tubes"] = ventral
+    if ventral != spec["ventral_tubes"]:
+        rep.fail(mid, "layout: %d ventral missile tubes below the keel, canon "
+                      "has %d" % (ventral, spec["ventral_tubes"]))
+
+    # -- the third bridge must hang BELOW the hull -------------------------
+    if spec.get("third_bridge"):
+        tb = group_verts(obj, "third_bridge")
+        hull = group_verts(obj, "hull")
+        if not tb:
+            rep.fail(mid, "layout: no third_bridge group - the ventral third "
+                          "bridge is the ship's most distinctive feature")
+        elif hull and min(v[1] for v in tb) >= min(v[1] for v in hull):
+            rep.fail(mid, "layout: third_bridge reaches y=%.1f but the hull "
+                          "keel is at y=%.1f - the third bridge must PROTRUDE "
+                          "from the bottom of the hull, not sit inside it"
+                     % (min(v[1] for v in tb), min(v[1] for v in hull)))
+        elif hull:
+            out["third_bridge_below"] = (min(v[1] for v in hull)
+                                         - min(v[1] for v in tb))
+
+    # -- aux engines, catapult, anchors, depth charges ---------------------
+    if out["aux_engines"] != spec["aux_engines"]:
+        rep.fail(mid, "layout: %d auxiliary engines, canon has %d"
+                 % (out["aux_engines"], spec["aux_engines"]))
+    if out["aux_engines"] and len(prefix("aux_engine")) < spec["aux_engines"]:
+        rep.fail(mid, "layout: auxiliary engines have no thruster hardpoints")
+    if spec.get("catapult"):
+        cat = group_verts(obj, "catapult")
+        if not cat:
+            rep.fail(mid, "layout: no catapult group")
+        elif max(v[2] for v in cat) < 0.30 * L:
+            rep.fail(mid, "layout: the catapult sits at z=%.0f, not on the aft "
+                          "aircraft deck (need z > %.0f)"
+                     % (max(v[2] for v in cat), 0.30 * L))
+        gold = obj["mat_verts"].get("accent_gold", [])
+        if not [v for v in gold if v[2] > 0.30 * L]:
+            rep.fail(mid, "layout: no accent_gold catapult rails on the aft deck")
+    if out["rocket_anchors"] != spec["rocket_anchors"]:
+        rep.fail(mid, "layout: %d rocket anchors, canon has %d (one each side of "
+                      "the bow)" % (out["rocket_anchors"], spec["rocket_anchors"]))
+    ra = group_verts(obj, "rocket_anchor")
+    if ra and max(v[2] for v in ra) > -0.25 * L:
+        rep.fail(mid, "layout: a rocket anchor sits at z=%.0f - they belong at "
+                      "the bow" % max(v[2] for v in ra))
+    if out["depth_charges"] != spec["depth_charges"]:
+        rep.fail(mid, "layout: %d depth-charge launchers, canon has %d"
+                 % (out["depth_charges"], spec["depth_charges"]))
+    return out
+
+
 def validate(root, quiet=False):
     rep = Report()
     manifest_path = os.path.join(root, "manifest.json")
@@ -627,6 +905,34 @@ def validate(root, quiet=False):
                   % (100.0 * sil.get("gold_frac", 0.0),
                      "n/a - gold is this ship's livery" if gm is None
                      else "limit %.0f%%" % (100.0 * gm)))
+            lay = info.get("lay") or {}
+            if lay:
+                want = LAYOUT.get(info["id"], {})
+                def n(key, need=None):
+                    got = lay.get(key)
+                    return ("%s (= %s)" % (got, need) if need is not None
+                            else "%s" % got)
+                print("  armament layout (canon counts from docs/research/05):")
+                print("              main %s | secondary %s, centreline | ciws %s"
+                      " | merged anti_air battery %s"
+                      % (n("main", want.get("main")),
+                         n("secondary", want.get("secondary")),
+                         n("ciws", want.get("ciws")), n("aa", want.get("aa"))))
+                print("              torpedo ports %s (fore %s / aft %s / broadside %s)"
+                      " | missile launchers %s (ventral %s)"
+                      % (n("torpedo_ports", want.get("torpedo_ports")),
+                         n("torpedo_fore", want.get("torpedo_fore")),
+                         n("torpedo_aft", want.get("torpedo_aft")),
+                         n("torpedo_broadside", want.get("torpedo_broadside")),
+                         n("missile_launchers", want.get("missile_launchers")),
+                         n("ventral_tubes", want.get("ventral_tubes"))))
+                print("              third bridge %s, protruding %.2f m BELOW the "
+                      "keel | aux engines %s | catapult %s | rocket anchors %s"
+                      " | depth charges %s"
+                      % (n("third_bridge"), lay.get("third_bridge_below", 0.0),
+                         n("aux_engines", want.get("aux_engines")),
+                         n("catapult"), n("rocket_anchors", want.get("rocket_anchors")),
+                         n("depth_charges", want.get("depth_charges"))))
             print("  groups (%d): %s" % (len(info["groups"]), " ".join(info["groups"])))
             print("  materials (%d): %s" % (len(info["materials"]),
                                             " ".join(info["materials"])))

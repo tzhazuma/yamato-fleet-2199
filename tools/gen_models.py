@@ -849,6 +849,33 @@ def as_list(objs):
     return list(objs)
 
 
+def merge_parts(objs, group=None):
+    """Concatenate several Parts into ONE Part (one mesh in the OBJ).
+
+    WHY THIS EXISTS: a weapon mount is one object - a pedestal, a gun house and
+    a barrel cluster - but it is built from several primitives, and the OBJ
+    carries no structure below the ``g`` group.  Emitting a mount as one Part
+    makes it COUNTABLE from the file: tools/validate_models.py counts
+    face-connected components per group, so "38 pulse-laser mounts" is exactly
+    38 meshes instead of 178 loose boxes, and a battery that silently thinned
+    back to six mounts fails the check.  It costs nothing at runtime either -
+    src/core/assets.js merges a group's faces into one BufferGeometry anyway -
+    and it preserves each face's own material and normal.
+    """
+    parts = as_list(objs)
+    if len(parts) == 1:
+        return parts[0]
+    verts, faces, mats = [], [], []
+    for p in parts:
+        off = len(verts)
+        verts.extend(p.verts)
+        for f, m in zip(p.faces, p.mats):
+            faces.append(tuple(i + off for i in f))
+            mats.append(m)
+    return Part(verts, faces, None, group or parts[0].group, parts[0].smooth,
+                mats=mats)
+
+
 def xf_translate(objs, d):
     for p in as_list(objs):
         p.translate(d)
@@ -1724,8 +1751,9 @@ X extent == `beamM`, the 12 000-triangle budget and the hardpoint rules.
 | Ship local space | bow **-Z**, up **+Y**, origin at the ship's centre (mid-length, centreline, mid-height of the hull) |
 | Files | one `<id>.obj` + one `<id>.mtl` per ship, ASCII, no textures |
 | Faces | triangles and quads only; `vn` normals written (per face when flat, per vertex when smooth) |
-| Groups | fixed: `hull`, `superstructure`, `bridge`, `wave_motion_gun`, `engine_nozzle`, `wing`, `radiator`; indexed mounts: `turret_main_1..N`, `turret_secondary_1..N`, `ciws_1..N` (SPEC §5 rule 3) |
+| Groups | fixed: `hull`, `superstructure`, `bridge`, `wave_motion_gun`, `engine_nozzle`, `wing`, `radiator`; merged 2199 parts: `anti_air`, `torpedo_tube`, `missile_launcher`, `third_bridge`, `catapult`, `rocket_anchor`, `aux_engine`, `depth_charge`; indexed mounts: `turret_main_1..N`, `turret_secondary_1..N`, `ciws_1..N` (SPEC §5 rule 3) |
 | Mount pivots | an indexed group's name IS its manifest hardpoint name and its geometry is authored **centred on its own pivot** - x = z = 0 on the traverse axis, y = 0 at the deck line where the barbette meets the hull. The renderer does `mesh.position = hardpoint.pos` then `mesh.rotation.y = <traverse>` (0 = trained fore-and-aft), so the turrets traverse individually |
+| Merged groups | a part that does NOT rotate takes a merged group, never an indexed one: a torpedo port is a hole in the plating, and naming it `torpedo_tube_3` would drag it into the pivot contract (and correctly fail it). Its direction lives in the hardpoint `dir` |
 | Materials | names are the frozen SPEC section 5.5 palette; the *values* are per-ship faction colours taken from `docs/research/01-yamato-ships.md` |
 | Budget | under 12 000 triangles per ship |
 
@@ -1751,12 +1779,36 @@ consumer must take from the manifest rather than hardcoding.
 |---|---|
 | `wmgun` | bow wave-motion-gun / heavy beam emitter (named `wave_motion_gun`) |
 | `turret` | main and secondary gun mounts (`turret_main_*`, `turret_secondary_*`) |
-| `thruster` | stern engine bells (`engine_*`, dir +Z) |
-| `anti_air` | close-in pulse-laser mounts (`anti_air_*`) |
+| `thruster` | stern engine bells and the auxiliary engines (`engine_*`, `aux_engine_*`, dir +Z) |
+| `anti_air` | pulse-laser mounts (`ciws_*`, individually traversable) |
+| `torpedo` | hull torpedo tubes (`torpedo_tube_*`), openings in the plating |
+| `missile` | missile launchers (`missile_launcher_*`), ventral tubes and box/funnel cells |
 
 Every ship carries a bow `wave_motion_gun` emitter, centreline `turret_main`
 mounts, at least two `turret_secondary` and two `anti_air` mounts, and stern
 `engine_*` bells.
+
+### Yamato armament layout (task-9 rebuild)
+
+`yamato` is rebuilt against `docs/research/05-yamato-armament-layout.md`, and
+`tools/validate_models.py` now asserts the counts from the file itself:
+
+* **3** triple 48 cm main turrets - two forward superfiring, one aft.
+* **2** triple 20 cm secondary turrets, both on the **centreline**.  The old
+  model carried four triple WING mounts, which is what made the ship read as
+  the wrong ship.
+* **40** pulse-laser mounts of five types plus the two conning-tower firearms:
+  4 ship as the traversable `ciws_1..4` (that is `CONFIG.ships.yamato.pdMounts`,
+  a balance number) and the other 38 as the merged `anti_air` battery.
+* **28** torpedo tubes as hull openings: 6 fore, 6 aft, 8 per side.
+* **12** missile launchers: 10 ventral tubes in the keel, the eight-barrel box on
+  the aft deckhouse, and the funnel launcher (煙突ミサイル).
+* the **third bridge** (第三艦橋) hangs BELOW the hull under the command tower,
+  the two auxiliary engines flank the main bells, and the aft aircraft deck
+  carries the catapult and its elevator.
+* the main wings are modelled **folded** against the flanks: SPEC §5 rule 7 pins
+  the model's X extent to `beamM`, so a deployed 60 m delta wing would break the
+  contract for every consumer that reads `beamM`.
 
 ## Surface detail (task-7 pass)
 
@@ -1784,9 +1836,15 @@ painted band and the raised seams - not the bare hull - land exactly on
 
 ## Faction identity (what to look for)
 
-* **UNCF** - grey hulls with a red waterline band and cyan drive glow. Yamato:
-  flat blunt bow face with a recessed circular WM-gun muzzle, pagoda bridge at
-  station 0.30, three triple turrets (2 fore / 1 aft). Andromeda: broad flat bow
+* **UNCF** - grey hulls with a red waterline band and cyan drive glow. Yamato
+  (2199 rebuild): raked clipper bow with the WM-gun muzzle proud of it and
+  missile ports flanking it, rocket anchors either side, three triple 48 cm
+  turrets (2 fore superfiring / 1 aft), **two centreline 20 cm triples**, a
+  pagoda tower whose **third bridge hangs below the hull**, a funnel that is
+  itself a missile launcher, 28 torpedo ports flush in the plating, the 40-mount
+  pulse-laser battery in sponsons along both flanks, folded delta main wings,
+  two auxiliary engine bells and the aft aircraft deck with its catapult.
+  Andromeda: broad flat bow
   with **twin** WM-gun muzzles, four triple turrets, one large + four medium
   nozzles. Kirishima: a fixed gun **barrel protruding** from the bow, squat
   bridge at station 0.35. Yukikaze: the 艦首装甲翼 bow armour wing - a flat plate
@@ -1924,7 +1982,7 @@ def loft_split(sections, split, mat_a, mat_b, group, smooth=True):
 def mount_turret(s, name, group, deck_y, z, barbette_r, barbette_h, body, barrels,
                  barrel_r, barrel_len, aft=False, x=0.0, elev=0.09,
                  body_mat="hull_grey", barbette_mat="gun_metal",
-                 barrel_mat="gun_metal"):
+                 barrel_mat="gun_metal", muzzle_ring=None):
     """Author a naval turret CENTRED ON ITS OWN PIVOT + register its hardpoint.
 
     SPEC 5 rule 3: the indexed group keeps its vertices at the origin - x = z = 0
@@ -1936,7 +1994,8 @@ def mount_turret(s, name, group, deck_y, z, barbette_r, barbette_h, body, barrel
     parts = turret(barbette_r, barbette_h, body, barrels, barrel_r, barrel_len,
                    group=name, body_mat=body_mat, barbette_mat=barbette_mat,
                    barrel_mat=barrel_mat, elev=elev, deck_ring=True,
-                   muzzle_ring=main, barbette_seg=12 if main else 10)
+                   muzzle_ring=main if muzzle_ring is None else muzzle_ring,
+                   barbette_seg=12 if main else 10)
     if aft:
         # author the rest orientation into the local geometry, so traverse 0
         # means "trained fore-and-aft" for this mount
@@ -2049,7 +2108,8 @@ def pulse_laser_mount(form="twin_75", group="anti_air", scale=1.0,
         parts.append(cylinder(br * scale, blen * scale, axis="z",
                               center=(ox, by, -blen * scale * 0.42), segments=4,
                               mat=barrel_mat, group=group, caps=False))
-    return parts
+    # one Part per mount, so the battery is countable straight off the OBJ
+    return merge_parts(parts)
 
 
 def mount_pulse_laser(s, name, deck_y, z, x, form="twin_75", group=None,
@@ -2097,12 +2157,14 @@ def missile_cell_box(rows, cols, cell_r, cell_len, center, group="missile_launch
         for c in range(cols):
             ox = ((c + 0.5) / cols - 0.5) * bw * 0.78
             oy = ((r + 0.5) / rows - 0.5) * bh * 0.78
+            # caps=False: the box body closes the far end, so only the mouth
+            # needs geometry - 10 triangles per tube instead of 20
             parts.append(cylinder(cell_r, cell_len, axis="z", segments=5,
                                   center=(center[0] + ox, center[1] + oy,
                                           center[2] + sgn * (bd / 2.0
                                                              + cell_len * 0.35)),
-                                  mat=cell_mat, group=group, caps=True))
-    return parts
+                                  mat=cell_mat, group=group, caps=False))
+    return merge_parts(parts)
 
 
 def rocket_anchor(center, scale=1.0, group="rocket_anchor", axis="z"):
@@ -2113,7 +2175,7 @@ def rocket_anchor(center, scale=1.0, group="rocket_anchor", axis="z"):
     in it - because that is the state the ship is in for the whole demo.
     """
     hx, hy, hz = center
-    return [
+    return merge_parts([
         frustum_box(4.6 * scale, 3.4 * scale, 5.4 * scale,
                     center=(hx, hy, hz), scale_top=(0.86, 0.9),
                     mat="hull_grey", group=group),
@@ -2122,13 +2184,13 @@ def rocket_anchor(center, scale=1.0, group="rocket_anchor", axis="z"):
                  mat="gun_metal", group=group, caps=True),
         box(2.6 * scale, 1.2 * scale, 2.6 * scale,
             center=(hx, hy - 2.0 * scale, hz), mat="gun_metal", group=group),
-    ]
+    ])
 
 
 def depth_charge_rack(center, group="depth_charge", scale=1.0):
     """Type 94 depth-charge launcher: a short rail with a stack of charges."""
     cx, cy, cz = center
-    return [
+    return merge_parts([
         box(3.2 * scale, 0.8 * scale, 7.0 * scale, center=(cx, cy, cz),
             mat="gun_metal", group=group),
         box(2.6 * scale, 2.2 * scale, 2.6 * scale,
@@ -2137,10 +2199,10 @@ def depth_charge_rack(center, group="depth_charge", scale=1.0):
         box(2.6 * scale, 2.2 * scale, 2.6 * scale,
             center=(cx, cy + 1.4 * scale, cz + 1.6 * scale), mat="deck_dark",
             group=group),
-    ]
+    ])
 
 
-def stowed_delta_wing(span, root_chord, tip_chord, thickness, base, cant=0.30,
+def stowed_delta_wing(span, root_chord, tip_chord, thickness, base, cant=0.12,
                       sweep=0.45, fold=0.45, group="wing", mat="hull_grey",
                       fold_mat="deck_dark"):
     """A large delta main wing in its RETRACTED (folded) state.
@@ -2153,6 +2215,12 @@ def stowed_delta_wing(span, root_chord, tip_chord, thickness, base, cant=0.30,
     angular plate sweeping up and aft off the flank, which is the view the
     silhouette is judged in.  Two panels: the inboard root, and the outboard
     section folded back against it.
+
+    ``cant`` is signed so that a POSITIVE value leans the panel's top edge
+    INBOARD: the bottom edge sits on the hull's belt radius (the widest thing on
+    the ship) and everything above it tucks back inside beamM.  Getting the sign
+    the other way pushes the wing 1.5 m outside the beam and breaks the X
+    extent, which is what the first cut of this did.
     """
     bx, by, bz = base
     root_h = span * fold
@@ -2164,16 +2232,18 @@ def stowed_delta_wing(span, root_chord, tip_chord, thickness, base, cant=0.30,
                        mat=mat, group=group)
     root.rotate_z(cant)
     root.translate((bx, by, bz))
+    # where the root panel's top edge actually ended up, so the folded outer
+    # section hinges off it instead of floating in space
+    top_x = bx - root_h * math.sin(cant)
+    top_y = by + root_h * math.cos(cant)
     outer = frustum_box(thickness * 0.85, outer_h, root_chord * 0.72,
                         center=(0.0, outer_h / 2.0, 0.0),
                         scale_top=(0.9, tip_chord / (root_chord * 0.72) * 0.6),
                         top_offset=(0.0, -sweep * root_chord * 0.8),
                         mat=fold_mat, group=group)
     outer.rotate_z(cant * 2.4)
-    outer.translate((bx + root_h * math.sin(cant) + 0.4,
-                     by + root_h * math.cos(cant),
-                     bz - sweep * root_chord * 0.9))
-    return [root, outer]
+    outer.translate((top_x, top_y, bz - sweep * root_chord * 0.9))
+    return merge_parts([root, outer])
 
 
 def aux_engine_bell(radius, length, center, group="aux_engine", segments=10,
@@ -2192,7 +2262,7 @@ def aux_engine_bell(radius, length, center, group="aux_engine", segments=10,
         parts.append(disc(radius * 0.62, 1.2, axis="z",
                           center=(center[0], center[1], center[2] + length * 0.5),
                           segments=segments, mat="engine_glow", group=group))
-    return parts
+    return merge_parts(parts)
 
 
 def third_bridge_pod(z, y_top, y_bottom, width, length, group="third_bridge",
@@ -2231,7 +2301,7 @@ def third_bridge_pod(z, y_top, y_bottom, width, length, group="third_bridge",
         parts.append(frustum_box(1.2, 2.6, length * 0.55,
                                  center=(sgn * width * 0.46, y_bottom + h * 0.42, z),
                                  scale_top=(0.7, 0.8), mat="deck_dark", group=group))
-    return parts
+    return merge_parts(parts)
 
 
 def engine_cluster(s, positions, radius, length, z_mouth, names=("engine_1",),
@@ -2270,11 +2340,26 @@ def swept_fin(width, thickness, length, sweep=0.35, rise=0.0, mat="hull_grey",
 def build_yamato(s):
     """Yamato-class space battleship (BBY-01) - the player ship.
 
-    2199 silhouette: raked clipper bow with the wave-motion-gun muzzle standing
-    proud of it, a sheer line rising to the forecastle, a hull that tapers to a
-    keel, a multi-tier pagoda bridge with the angled funnel abaft it, and the
-    signature SUPERFIRING forward pair - turret #1 on the forecastle, turret #2
-    raised on a barbette behind and above it - plus turret #3 aft.
+    Rebuilt against docs/research/05-yamato-armament-layout.md.  The four
+    corrections that drove the rebuild, in the order the user would notice them:
+
+    1. the secondary battery is TWO triple 20 cm turrets on the CENTRELINE, not
+       four triple wing mounts - the wing mounts were the single most obviously
+       wrong thing in the old silhouette;
+    2. the third bridge (第三艦橋) hangs BELOW the hull, directly under the
+       command tower, and it is the ship's most distinctive feature;
+    3. the torpedo battery is HULL OPENINGS (6 fore, 6 aft, 8 per side), not
+       turrets - they are ports flush with the plating;
+    4. the AA battery is 40 pulse-laser mounts of five types plus the two
+       conning-tower firearms, not six CIWS boxes.
+
+    2199 hull form: raked clipper bow with the wave-motion-gun muzzle standing
+    proud of it and missile ports flanking it in the bow face, rocket anchors
+    either side of the bow, a sheer line rising to the forecastle, a hull that
+    tapers to a keel, the SUPERFIRING forward pair (turret #1 on the forecastle,
+    #2 raised behind and above it) plus #3 aft, and the aft aircraft deck with
+    its catapult.  Every weapon except the wave motion gun and the bow/stern
+    missiles is concentrated on the UPPER hull (艦体上部に集中配置).
     """
     L, B = s.L, s.B
     S = lambda t: (t - 0.5) * L                       # station -> z
@@ -2304,90 +2389,246 @@ def build_yamato(s):
     s.rake = make_rake(L, -L / 2.0, L / 2.0, 18.6, -11.5, bow_r=20.0, bow_p=1.8,
                        bow_fade=0.24, stern_r=10.0, stern_p=1.8, stern_fade=0.20)
 
+    def raked(p):
+        """Author a hull-fitting hardpoint where the rake will actually put it.
+
+        apply_rake() shears every hull-following part, so a port modelled flush
+        with the bow plating ends up several metres aft of the station it was
+        drawn at.  Registering the hardpoint at the SAME deformed point keeps the
+        port and the weapon that fires through it in agreement - without this the
+        six forward tubes would aim from a point 5 m off their own openings.
+        """
+        return (p[0], p[1], p[2] + s.rake(p[1], p[2]))
+
     # ---- wave motion gun: the bow's defining feature ----------------------
-    s.add(bow_gun(10.5, 34.0, -L / 2.0, y=1.2, segments=28, collar=12.4,
+    #  ... plus the two missile ports that flank it IN THE BOW FACE.  They ship
+    #  in the wave_motion_gun group because that group is excluded from the rake:
+    #  the bow face is shaped by the emitter housing, so a port authored on it
+    #  must not be sheared again on top of that.
+    #  24 segments, not 28: at 355 m the collar ring is ~145 px across and the
+    #  two extra segments per ring cost ~90 triangles for nothing.
+    s.add(bow_gun(10.5, 34.0, -L / 2.0, y=1.2, segments=24, collar=12.4,
                   housing_mat="hull_grey", collar_mat="gun_metal"))
     # blast shield / housing shoulders blended into the forecastle
     s.add(frustum_box(30.0, 22.0, 30.0, center=(0.0, 1.0, S(0.055)),
                       scale_top=(0.55, 0.70), top_offset=(0.0, 4.0),
                       mat="hull_grey", group="hull"))
+    # the wave motion gun's own hardpoint is registered FIRST in the file, so a
+    # reader (and src/weapons/weapons.js, which fires from the first hardpoint of
+    # a family) meets the ship's main weapon before its escorts
     s.hp("wave_motion_gun", "wmgun", (0.0, 1.2, S(0.06)), (0.0, 0.0, -1.0))
+    for i, sgn in enumerate((1.0, -1.0)):
+        # face exactly ON the bow plane: any proudness would push the model's Z
+        # extent past lengthM, and SPEC 5 rule 7 pins it exactly
+        s.add(hull_port(2.6, (sgn * 8.2, 7.6, -L / 2.0 + 1.5), axis="z", depth=3.0,
+                        group="wave_motion_gun", segments=6))
+        s.hp("missile_launcher_bow_%d" % (i + 1), "missile",
+             (sgn * 8.2, 7.6, -L / 2.0 + 1.5), (sgn * 0.18, 0.0, -1.0))
 
     # ---- forecastle breakwater + brow ------------------------------------
     s.add(frustum_box(26.0, 5.0, 22.0, center=(0.0, dy(S(0.155)) - 1.6, S(0.155)),
                       scale_top=(0.42, 0.55), top_offset=(0.0, 4.5),
                       mat="deck_dark", group="hull"))
+    # ---- rocket anchors (ロケットアンカー): one each side of the bow --------
+    for i, sgn in enumerate((1.0, -1.0)):
+        az = S(0.088)
+        ax = hx_at(secs, az, dy(az) - 2.0) * 0.94
+        s.add(rocket_anchor((sgn * ax, dy(az) - 1.4, az)))
+        s.hp("rocket_anchor_%d" % (i + 1), "thruster", raked((sgn * ax, dy(az) - 1.4, az)),
+             (0.0, 0.0, -1.0))
     for sgn in (1.0, -1.0):
-        s.add(box(4.0, 4.2, 9.0, center=(sgn * 11.0, dy(S(0.10)) - 3.0, S(0.10)),
-                  mat="deck_dark", group="hull"))     # anchor recesses
         s.add(box(6.0, 2.2, 9.0, center=(sgn * 12.5, dy(S(0.055)) - 0.5, S(0.055)),
                   mat="hull_white", group="hull"))    # hull-number plates
 
     # ---- SUPERFIRING FORWARD PAIR + aft turret ----------------------------
-    #   #1 on the forecastle, #2 on a raised barbette deckhouse behind/above it
-    z1, z2 = S(0.145), S(0.275)
+    #   #1 on the forecastle, #2 on a raised barbette deckhouse behind/above it,
+    #   #3 aft - three triple 48 cm positron shock cannon (research 05 table).
+    #   muzzle_ring is off: three barrels x three turrets of muzzle lips cost
+    #   ~570 triangles for a 3 m detail the chase camera cannot resolve.
+    #
+    #   The stations are set so the gun houses CLEAR each other, which the old
+    #   layout did not do: turret #2's house ran from -101 to -73 while the
+    #   tower's armoured base ran from -78 to -46, so the tower swallowed the
+    #   aft third of the turret.  Everything on the foredeck is now laid out
+    #   end to end: WM housing, #1, #2's deckhouse, #2, the secondary barbette,
+    #   then the tower.
+    z1, z2 = -124.0, -94.0
     d1, d2 = dy(z1), dy(z2)
-    s.add(frustum_box(40.0, 7.5, 44.0, center=(0.0, d2 + 3.75, z2),
+    fwd_roof = d2 + 7.5
+    s.add(frustum_box(42.0, 7.5, 46.0, center=(0.0, d2 + 3.75, z2),
                       scale_top=(0.90, 0.93), mat="hull_grey",
                       group="superstructure"))
     mount_turret(s, "turret_main_1", "turret_main", d1, z1,
-                 10.0, 4.0, (26.0, 9.5, 28.0), 3, 2.2, 21.0, elev=0.05)
-    mount_turret(s, "turret_main_2", "turret_main", d2 + 7.5, z2,
-                 10.0, 4.0, (26.0, 9.5, 28.0), 3, 2.2, 21.0, elev=0.05)
-    z3 = S(0.800)
+                 10.0, 4.0, (26.0, 9.5, 28.0), 3, 2.2, 21.0, elev=0.05,
+                 muzzle_ring=False)
+    mount_turret(s, "turret_main_2", "turret_main", fwd_roof, z2,
+                 10.0, 4.0, (26.0, 9.5, 28.0), 3, 2.2, 21.0, elev=0.05,
+                 muzzle_ring=False)
+    z3 = S(0.780)
     d3 = dy(z3)
     s.add(frustum_box(36.0, 5.0, 38.0, center=(0.0, d3 + 2.5, z3),
                       scale_top=(0.9, 0.93), mat="hull_grey", group="superstructure"))
     mount_turret(s, "turret_main_3", "turret_main", d3 + 5.0, z3,
-                 10.0, 4.0, (26.0, 9.5, 28.0), 3, 2.2, 21.0, aft=True, elev=0.05)
+                 10.0, 4.0, (26.0, 9.5, 28.0), 3, 2.2, 21.0, aft=True, elev=0.05,
+                 muzzle_ring=False)
 
-    # ---- WING secondaries (2 forward, 2 aft) on side sponsons -------------
-    for i, st in enumerate((0.415, 0.645)):
-        zz = S(st)
-        x = hx_at(secs, zz, dy(zz) - 1.0) * 0.80
-        for sgn in (1.0, -1.0):
-            s.add(box(11.0, 3.0, 15.0, center=(sgn * x, dy(zz) - 1.5, zz),
-                      mat="hull_grey", group="superstructure"))
-            mount_turret(s, "turret_secondary_%d" % (2 * i + (1 if sgn > 0 else 2)),
-                         "turret_secondary", dy(zz) + 0.2, zz, 4.6, 2.8,
-                         (10.0, 4.6, 11.0), 2, 1.0, 12.0, x=sgn * x, elev=0.10)
+    # ---- SECONDARY BATTERY: TWO triple 20 cm, both on the CENTRELINE -------
+    #  THE headline correction (research 05 section 1): the old model carried
+    #  four triple wing mounts, which is what made the ship read as the wrong
+    #  ship.  Canon is two centreline triples.  They sit where the published
+    #  side profiles put them: #1 superfiring over turret #2 on a barbette
+    #  rising off the forward deckhouse (the real Yamato's 15.5 cm #3 position),
+    #  #2 aft on the aft deckhouse roof, trained aft.
+    mount_turret(s, "turret_secondary_1", "turret_secondary", fwd_roof, -73.0,
+                 5.4, 10.2, (11.0, 4.6, 12.0), 3, 1.0, 12.0, elev=0.10)
+    s.add(frustum_box(28.0, 5.0, 26.0, center=(0.0, dy(48.0) + 2.5, 48.0),
+                      scale_top=(0.9, 0.93), mat="hull_grey",
+                      group="superstructure"))
+    aft_roof = dy(48.0) + 5.0
+    mount_turret(s, "turret_secondary_2", "turret_secondary", aft_roof, 48.0,
+                 5.4, 4.0, (11.0, 4.6, 12.0), 3, 1.0, 12.0, aft=True, elev=0.10)
 
-    # ---- AA / CIWS on sponsons distributed along the hull -----------------
-    for i, (st, sgn) in enumerate(((0.195, 1.0), (0.195, -1.0), (0.500, 1.0),
-                                   (0.500, -1.0), (0.845, 1.0), (0.845, -1.0))):
-        zz = S(st)
-        x = hx_at(secs, zz, dy(zz) - 0.5) * 0.88
-        s.add(box(6.0, 2.0, 7.0, center=(sgn * x, dy(zz) - 1.0, zz),
-                  mat="hull_grey", group="superstructure"))
-        mount_aa(s, "ciws_%d" % (i + 1), dy(zz) + 0.1, zz, sgn * x, scale=1.05)
+    # ---- aft deckhouse: the base of the aft superstructure -----------------
+    #  52 m long, because it carries five rows of AA mounts at 12 m spacing
+    #  (the 2199 ship's aft superstructure is a gun platform, not a shed).
+    aft_deck_z = 26.0
+    s.add(frustum_box(26.0, 6.0, 52.0, center=(0.0, dy(aft_deck_z) + 3.0, aft_deck_z),
+                      scale_top=(0.9, 0.93), mat="hull_grey",
+                      group="superstructure"))
+    aft_deck_roof = dy(aft_deck_z) + 6.0
 
-    # ---- PAGODA BRIDGE: armoured base + 5 tiers with platform overhangs ---
-    bz = S(0.300)
+    # ---- command-tower geometry (shared by the tower and the AA battery) ---
+    #  Canon stack, top down (research 05 section 2): captain's cabin at the very
+    #  top -> first bridge 10 m below it -> second bridge -> third bridge, and
+    #  the third bridge protrudes from the BOTTOM of the hull.  The tiers are
+    #  declared here because the AA battery is distributed over their roofs.
+    #  bz is placed so the tower's armoured base (32 m long) starts aft of the
+    #  secondary barbette: -48 puts its front face at -64, 1.6 m clear of the
+    #  barbette's aft edge, and leaves the funnels room between it and the aft
+    #  deckhouse.
+    bz = -48.0
     base = dy(bz)
-    tiers = [
+    TOWER_TIERS = [
         # width, height, length, platform overhang
-        (36.0, 11.0, 32.0, 2.6),
-        (30.0, 8.0, 27.0, 2.2),
-        (24.0, 7.0, 22.0, 1.9),
-        (18.0, 6.0, 17.0, 1.6),
-        (12.5, 5.0, 12.0, 1.3),
+        (36.0, 12.0, 32.0, 2.6),      # armoured base
+        (30.0, 9.0, 27.0, 2.2),       # second bridge (route planning / navigation)
+        (24.0, 8.0, 22.0, 1.9),       # first bridge (main)
     ]
+    first_bridge_roof = base + sum(t[1] for t in TOWER_TIERS)
+
+    # ---- PULSE-LASER BATTERY: 40 mounts of five types + 2 tower firearms ---
+    #  The battery is what the "under-armed" read was actually about: six CIWS
+    #  boxes against canon's forty.  Distribution follows the research rule -
+    #  "along both sides of the hull and the superstructure, in sponsons, at
+    #  several heights, not in a single row" - with the caveat the research
+    #  records in section 5: the sources give no frames, so these STATIONS ARE A
+    #  PLAUSIBLE RECONSTRUCTION matched to the published side profiles.
+    #
+    #  Only four mounts are true point defence (ciws_1..4): CONFIG's pdMounts is
+    #  a balance number and 40 fire-control channels would make the ship
+    #  immune to missiles, so the battery is MODELLED in full and the game
+    #  abstracts it to four channels.  The other 38 ship merged in `anti_air`.
+    def aa_on_deck(form, z, x, y):
+        """Merged-battery mount standing on its own sponson box."""
+        s.add(box(6.4, 2.2, 7.6, center=(x, y - 1.1, z), mat="hull_grey",
+                  group="superstructure"))
+        parts = pulse_laser_mount(form, group="anti_air")
+        xf_translate(parts, (x, y, z))
+        s.add(parts)
+
+    def aa_on_flank(form, z, sgn, y_off=0.4):
+        """Merged-battery mount on a sponson let into the hull side."""
+        y = dy(z) + y_off
+        aa_on_deck(form, z, sgn * hx_at(secs, z, y - 0.5) * 0.88, y)
+
+    # eight quadruple 12.7 cm - the four traversable ones on the raised
+    # deckhouses, the other four merged.  The forward pair sits just clear of
+    # the tower's front face, because the armoured base is 36 m wide and a mount
+    # let into it would be swallowed.  ciws_1/2 are the forward pair and
+    # ciws_3/4 the aft pair, so the manifest reads in station order.
+    for i, sgn in enumerate((1.0, -1.0)):
+        zz = bz - 24.0
+        s.add(box(7.4, 2.4, 8.8, center=(sgn * 18.5, fwd_roof - 1.2, zz),
+                  mat="hull_grey", group="superstructure"))
+        mount_pulse_laser(s, "ciws_%d" % (i + 1), fwd_roof, zz, sgn * 18.5,
+                          form="quad_127")
+    for i, sgn in enumerate((1.0, -1.0)):
+        mount_pulse_laser(s, "ciws_%d" % (i + 3), aft_deck_roof,
+                          aft_deck_z + 12.0, sgn * 11.5, form="quad_127")
+    # Mounts are spaced >= 12 m apart down each deckhouse row.  That is not
+    # cosmetic: a mount's barrels project ~4.6 m forward of its pedestal, so
+    # closer than that and two mounts read as one blob of guns in the render -
+    # and tools/validate_models.py counts mounts by connected geometry, so
+    # touching mounts would also stop being countable.
+    for sgn in (1.0, -1.0):
+        aa_on_deck("quad_127", z2 - 2.0, sgn * 18.5, fwd_roof)
+        aa_on_deck("quad_127", 62.0, sgn * 15.0, dy(62.0) + 2.6)
+    # two 8.8 cm triples on the tower's forward shoulders
+    for sgn in (1.0, -1.0):
+        aa_on_deck("triple_88", bz - 4.0, sgn * 17.5, base + 12.0)
+    # eight 12.7 cm twins: two rows on the forward deckhouse, one on the tower
+    # roof, one on the aft deckhouse.  They are NOT put on the stern deck: the
+    # aircraft deckhouse is 26 m wide there and a mount at |x| = 12 would be
+    # buried inside it.
+    for sgn in (1.0, -1.0):
+        aa_on_deck("twin_127", z2 - 14.0, sgn * 18.5, fwd_roof)
+        aa_on_deck("twin_127", z2 + 10.0, sgn * 18.5, fwd_roof)
+        aa_on_deck("twin_127", bz + 4.0, sgn * 17.5, base + 12.0)
+        aa_on_deck("twin_127", aft_deck_z - 12.0, sgn * 11.5, aft_deck_roof)
+    # eighteen 7.5 cm twins: ten along both flanks in sponsons at three
+    # heights, four on the tower roof, four on the aft deckhouse
+    for sgn in (1.0, -1.0):
+        for zz in (-146.0, 6.0, 30.0, 58.0, 118.0):
+            aa_on_flank("twin_75", zz, sgn)
+        for zz in (bz - 12.0, bz + 12.0):
+            aa_on_deck("twin_75", zz, sgn * 17.5, base + 12.0)
+        for zz in (aft_deck_z - 24.0, aft_deck_z + 24.0):
+            aa_on_deck("twin_75", zz, sgn * 11.5, aft_deck_roof)
+    # four 7.5 cm triples: two on the funnel platform, two aft
+    for sgn in (1.0, -1.0):
+        aa_on_deck("triple_75", -24.0, sgn * 10.5, dy(-24.0) + 9.0)
+        aa_on_deck("triple_75", aft_deck_z, sgn * 11.5, aft_deck_roof)
+    # the two conning-tower close-defence firearms, ON the bridge tower
+    for sgn in (1.0, -1.0):
+        aa_on_deck("tower_gun", bz + 4.0, sgn * 10.5, first_bridge_roof)
+
+    # ---- COMMAND TOWER: cabin -> first bridge -> second bridge ------------
+    #  Window grids are 2-3 per face instead of the old 3-8: the tower is
+    #  ~120 px tall from the chase camera, and the wide grids were spending
+    #  ~840 triangles to say "windows".
     y = base
-    for i, (tw, th, tl, ov) in enumerate(tiers):
+    for i, (tw, th, tl, ov) in enumerate(TOWER_TIERS):
         s.add(frustum_box(tw, th, tl, center=(0.0, y + th / 2.0, bz),
                           scale_top=(0.90, 0.92), mat="hull_grey", group="bridge"))
         # platform overhang at the tier's foot (this is what makes it a pagoda)
         s.add(box(tw + 2.0 * ov, 1.4, tl + 2.0 * ov,
                   center=(0.0, y + 0.7, bz), mat="deck_dark", group="bridge"))
-        # window row on the tier face
+        cols = 3 if i < 2 else 4
         s.add(window_grid((0.0, y + th * 0.62, bz - tl / 2.0), "-z",
-                          tw * 0.68, 1.6, 1, max(3, int(tw / 6.0)),
-                          win=(3.0, 1.9), group="bridge"))
-        s.add(window_grid((tw / 2.0, y + th * 0.62, bz), "x", tl * 0.62, 1.6, 1,
-                          max(3, int(tl / 8.0)), win=(3.0, 1.9), group="bridge"))
-        s.add(window_grid((-tw / 2.0, y + th * 0.62, bz), "-x", tl * 0.62, 1.6, 1,
-                          max(3, int(tl / 8.0)), win=(3.0, 1.9), group="bridge"))
+                          tw * 0.68, 1.8, 1, cols, win=(3.2, 2.0), group="bridge"))
+        s.add(window_grid((tw / 2.0, y + th * 0.62, bz), "x", tl * 0.62, 1.8, 1,
+                          cols - 1, win=(3.2, 2.0), group="bridge"))
+        s.add(window_grid((-tw / 2.0, y + th * 0.62, bz), "-x", tl * 0.62, 1.8, 1,
+                          cols - 1, win=(3.2, 2.0), group="bridge"))
         y += th
+    # The captain's cabin (艦長室) is at the VERY TOP, on a short trunk, and the
+    # first bridge sits exactly 10 m below it - the one stacking rule the
+    # research states as a number (docs/research/05 section 2), so the trunk is
+    # sized to put the two window bands 10 m apart rather than eyeballed.
+    trunk_h = 4.0
+    cabin_h = 5.0
+    s.add(frustum_box(12.0, trunk_h, 13.0, center=(0.0, y + trunk_h / 2.0, bz),
+                      scale_top=(0.95, 0.95), mat="hull_grey", group="bridge"))
+    cabin_y = y + trunk_h
+    s.add(frustum_box(15.0, cabin_h, 16.0, center=(0.0, cabin_y + cabin_h / 2.0, bz),
+                      scale_top=(0.80, 0.84), mat="hull_grey", group="bridge"))
+    s.add(window_grid((0.0, cabin_y + cabin_h * 0.58, bz - 8.0), "-z", 10.4, 1.8,
+                      1, 3, win=(3.2, 2.0), group="bridge"))
+    for sgn in (1.0, -1.0):
+        s.add(window_grid((sgn * 7.5, cabin_y + cabin_h * 0.58, bz),
+                          "x" if sgn > 0 else "-x", 11.0, 1.8, 1, 3,
+                          win=(3.2, 2.0), group="bridge"))
+    y = cabin_y + cabin_h
     # rangefinder / director on top
     s.add(frustum_box(9.0, 4.0, 10.0, center=(0.0, y + 2.0, bz - 1.0),
                       scale_top=(0.72, 0.78), mat="hull_grey", group="bridge"))
@@ -2398,23 +2639,86 @@ def build_yamato(s):
     # tripod mast with radar arrays
     mast_y = y + 4.0
     for mx in (-3.4, 0.0, 3.4):
-        leg = cylinder(0.7, 19.0, axis="y", center=(0.0, 9.5, 0.0), segments=6,
+        leg = cylinder(0.7, 16.0, axis="y", center=(0.0, 8.0, 0.0), segments=6,
                        radius2=0.45, mat="hull_grey", group="bridge", smooth=True)
-        leg.rotate_x(0.0)
-        leg.translate((mx * 0.35, mast_y, bz - 1.0 + (0.0 if mx else 0.0)))
+        leg.translate((mx * 0.35, mast_y, bz - 1.0))
         s.add(leg)
-    s.add(box(12.0, 0.9, 0.9, center=(0.0, mast_y + 19.0, bz - 1.0), mat="gun_metal",
+    s.add(box(12.0, 0.9, 0.9, center=(0.0, mast_y + 16.0, bz - 1.0), mat="gun_metal",
               group="bridge"))
-    s.add(cylinder(2.6, 0.8, axis="y", center=(0.0, mast_y + 13.0, bz - 1.0),
+    s.add(cylinder(2.6, 0.8, axis="y", center=(0.0, mast_y + 11.0, bz - 1.0),
                    segments=10, mat="deck_dark", group="bridge"))
     for gz in (-4.0, 4.0):
-        s.add(box(7.0, 3.0, 0.8, center=(0.0, mast_y + 16.0, bz - 1.0 + gz),
+        s.add(box(7.0, 3.0, 0.8, center=(0.0, mast_y + 13.5, bz - 1.0 + gz),
                   mat="gun_metal", group="bridge"))   # radar arrays
-    s.add_at(mast(9.0, 0.9, segments=6, arms=2, dish_r=3.6), (0.0, mast_y + 19.0, bz - 1.0))
+    s.add_at(mast(8.0, 0.9, segments=6, arms=2, dish_r=3.6), (0.0, mast_y + 16.0, bz - 1.0))
 
-    # ---- angled funnel abaft the bridge ----------------------------------
-    for i, (st, fr, fl) in enumerate(((0.395, 7.0, 22.0), (0.445, 5.0, 15.0))):
-        fz = S(st)
+    # ---- THIRD BRIDGE (第三艦橋): the pod hanging UNDER the hull -----------
+    #  Directly beneath the command tower and protruding from the BOTTOM of the
+    #  hull - the sub-bridge / backup for the first bridge, and the single most
+    #  distinctive feature of the ship (docs/research/05 section 2).  The 2199
+    #  Yamato does not look like itself without it.  It is authored downward
+    #  from the keel so tools/validate_models.py can assert it measures BELOW
+    #  the hull group's lowest vertex.
+    keel_here = min(p[1] for p in section_at(secs, bz))
+    s.add(third_bridge_pod(bz, keel_here + 3.0, keel_here - 11.4, 22.0, 30.0))
+
+    # ---- TORPEDO BATTERY: 28 HULL OPENINGS, not turrets -------------------
+    #  Canon: 6 forward tubes, 6 aft, and 8 per side broadside - all of them
+    #  openings in the plating (docs/research/05 section 3).  They ship merged
+    #  in `torpedo_tube` and never rotate, so they must NOT take an indexed
+    #  mount name; the firing direction lives in the hardpoint `dir`, and the
+    #  fore tubes are registered FIRST so the torpedo weapon - which fires from
+    #  the first hardpoint of its family - still launches from the bow.
+    def tube(z, sgn, y, direction, name, radius=2.6, depth=1.4):
+        """One hull tube, with its FACE landing exactly on the belt radius.
+
+        The belt ribbon - not the bare loft - is what pins the ship's beam, so a
+        port is authored outward from the hull surface until its face sits on
+        that radius.  Anything proud of it would push the model's X extent past
+        beamM and break SPEC 5 rule 7 (X extent == beamM, exactly).
+        """
+        face_x = hx_at(secs, z, y) * BELT_SCALE
+        cx = sgn * (face_x - depth / 2.0)
+        s.add(hull_port(radius, (cx, y, z), axis="x", depth=depth,
+                        group="torpedo_tube", segments=5))
+        s.hp(name, "torpedo", raked((cx, y, z)), direction)
+
+    for i, zz in enumerate((-138.0, -126.0, -114.0)):
+        for sgn in (1.0, -1.0):
+            tube(zz, sgn, 2.0, (sgn * 0.22, 0.0, -1.0),
+                 "torpedo_tube_fore_%d%s" % (i + 1, "" if sgn > 0 else "_s"))
+    for i, zz in enumerate((124.0, 134.0, 144.0)):
+        for sgn in (1.0, -1.0):
+            tube(zz, sgn, 2.0, (sgn * 0.22, 0.0, 1.0),
+                 "torpedo_tube_aft_%d%s" % (i + 1, "" if sgn > 0 else "_s"))
+    for i, zz in enumerate((-70.0, -50.0, -30.0, 30.0, 52.0, 74.0, 96.0, 118.0)):
+        for sgn in (1.0, -1.0):
+            tube(zz, sgn, -1.0, (sgn, 0.0, 0.0),
+                 "torpedo_tube_%s%d" % ("p" if sgn > 0 else "s", i + 1))
+
+    # ---- MISSILE BATTERY: 10 ventral tubes + the eight-barrel box ---------
+    #  Canon also gives a funnel launcher (煙突ミサイル), added with the funnel
+    #  below.  The ventral tubes sit in the keel, where nothing can shoot at
+    #  them, which is exactly why they are there; their faces hang 0.3 m below
+    #  the keel plate so they read as openings rather than being swallowed by
+    #  the (opaque) hull loft.
+    for i, zz in enumerate((-20.0, 0.0, 20.0, 40.0, 60.0)):
+        ky = min(p[1] for p in section_at(secs, zz)) + 0.8
+        for j, sgn in enumerate((1.0, -1.0)):
+            s.add(hull_port(2.4, (sgn * 6.0, ky, zz), axis="y", depth=2.2,
+                            group="missile_launcher", segments=6))
+            s.hp("missile_launcher_ventral_%d" % (2 * i + j + 1), "missile",
+                 (sgn * 6.0, ky, zz), (0.0, -1.0, 0.0))
+    s.add(missile_cell_box(2, 4, 1.1, 3.0, (0.0, aft_deck_roof + 1.5, aft_deck_z - 4.0),
+                           face="+z"))
+    s.hp("missile_launcher_box", "missile",
+         (0.0, aft_deck_roof + 1.5, aft_deck_z - 2.0), (0.0, 0.0, 1.0))
+
+    # ---- angled funnel - which IS a missile launcher (煙突ミサイル) --------
+    #  Between the tower (aft face at bz + 16 = -32) and the aft deckhouse
+    #  (front face at aft_deck_z - 26 = 0), which is the only space the 2199
+    #  profile leaves for it.
+    for i, (fz, fr, fl) in enumerate(((-24.0, 7.0, 22.0), (-12.0, 5.0, 15.0))):
         fy = dy(fz)
         fun = cylinder(fr, fl, axis="y", center=(0.0, 0.0, 0.0), segments=16,
                        radius2=fr * 0.86, mat="hull_grey", group="superstructure",
@@ -2423,7 +2727,7 @@ def build_yamato(s):
         fun.translate((0.0, fy + fl / 2.0 - 1.0, fz))
         s.add(fun)
         cap = ring(fr * 0.80, fr * 1.10, 1.6, axis="y",
-                   center=(0.0, fy + fl - 1.0, fz + 0.22 * fl), segments=16,
+                   center=(0.0, fy + fl - 1.0, fz + 0.22 * fl), segments=12,
                    mat="deck_dark", group="superstructure")
         s.add(cap)
         for k in range(3):
@@ -2433,13 +2737,42 @@ def build_yamato(s):
         s.add(frustum_box(16.0, 4.0, 18.0, center=(0.0, fy + 2.0, fz),
                           scale_top=(0.85, 0.9), mat="hull_grey",
                           group="superstructure"))
+    # 煙突ミサイル - canon calls the funnel a missile launcher outright, so its
+    # aft face carries a cell block.  Leaving the funnel purely decorative is
+    # part of what made the old model read as under-armed.  The block sits far
+    # enough aft that its own body clears the funnel's skin: buried in the
+    # funnel it would be invisible, and only the tube mouths would read.
+    fz0, fr0, fl0 = -24.0, 7.0, 22.0
+    s.add(missile_cell_box(2, 3, 1.0, 2.8,
+                           (0.0, dy(fz0) + fl0 * 0.62, fz0 + fr0 * 0.55 + 1.6),
+                           face="+z"))
+    s.hp("missile_launcher_funnel", "missile",
+         (0.0, dy(fz0) + fl0 * 0.62, fz0 + fr0 * 0.55 + 4.6), (0.0, 0.0, 1.0))
 
-    # ---- aft deckhouse + catapult deck -----------------------------------
-    s.add(frustum_box(24.0, 6.0, 30.0, center=(0.0, dy(S(0.905)) + 3.0, S(0.905)),
-                      scale_top=(0.88, 0.90), mat="hull_grey", group="superstructure"))
-    for gx in (-4.0, 4.0):
-        s.add(box(1.6, 0.5, 30.0, center=(gx, dy(S(0.90)) + 0.9, S(0.90)),
-                  mat="accent_gold", group="hull"))   # catapult rails
+    # ---- aft aircraft deck: catapult + elevator --------------------------
+    #  The real battleship Yamato carried its seaplane catapults aft of turret
+    #  #3, and the 2199 ship keeps that deck with an elevator down into the
+    #  stern hangar (docs/research/05 section 2).  The rails are the accent_gold
+    #  runs the silhouette check measures.
+    ac_z = S(0.905)
+    ac_y = dy(ac_z)
+    s.add(frustum_box(26.0, 5.0, 34.0, center=(0.0, ac_y + 2.5, ac_z),
+                      scale_top=(0.88, 0.92), mat="hull_grey",
+                      group="superstructure"))
+    s.add(box(24.0, 0.8, 36.0, center=(0.0, ac_y + 5.2, ac_z), mat="deck_dark",
+              group="superstructure"))                     # flight deck
+    # the catapult assembly is one Part, so the validator counts one catapult
+    cat = [
+        box(1.8, 0.6, 30.0, center=(gx, ac_y + 6.0, ac_z + 2.0),
+            mat="accent_gold", group="catapult") for gx in (-3.6, 3.6)]
+    cat.append(cylinder(4.2, 1.0, axis="y", center=(0.0, ac_y + 6.2, ac_z - 14.0),
+                        segments=10, mat="gun_metal", group="catapult"))
+    for gx in (-6.0, 6.0):
+        cat.append(box(2.4, 1.2, 3.0, center=(gx, ac_y + 6.2, ac_z + 8.0),
+                       mat="gun_metal", group="catapult"))   # catapult trolleys
+    cat.append(box(12.0, 0.6, 14.0, center=(0.0, ac_y + 5.4, ac_z + 16.0),
+                   mat="hull_black", group="catapult"))      # hangar elevator
+    s.add(merge_parts(cat))
 
     # ---- shaped stern: overhanging transom, nozzles recessed --------------
     s.add(frustum_box(40.0, 24.0, 16.0, center=(0.0, 0.0, S(0.960)),
@@ -2449,30 +2782,66 @@ def build_yamato(s):
                       scale_top=(0.7, 0.8), mat="deck_dark", group="engine_nozzle"))
     engine_cluster(s, [(-9.6, 0.0), (9.6, 0.0)], 11.6, 20.0, L / 2.0,
                    names=("engine_1", "engine_2"), segments=22, bell_mat="hull_grey")
-    for (vx, vy) in ((-18.5, 7.0), (18.5, 7.0), (-18.5, -7.0), (18.5, -7.0)):
-        s.add(nozzle(3.6, 11.0, center=(vx, vy, L / 2.0 - 11.0), segments=12,
-                     fins=0, bell_mat="deck_dark", trim=8, vanes=0,
-                     actuator=False, throat=False))
+    # ---- the two AUXILIARY engines (補助エンジン) -------------------------
+    #  SEPARATE from the main wave-motion engine: they double as secondary
+    #  thrusters and they are what STARTS the wave engine (research 05 section
+    #  2), which is why the wave motion gun can be fired more than once.  They
+    #  are not decoration on the main cluster, so they get their own group.
+    for i, sgn in enumerate((1.0, -1.0)):
+        s.add(aux_engine_bell(5.2, 13.0, (sgn * 18.5, 6.0, L / 2.0 - 6.5)))
+        s.hp("aux_engine_%d" % (i + 1), "thruster",
+             (sgn * 18.5, 6.0, L / 2.0 - 6.5), (0.0, 0.0, 1.0))
+    for (vx, vy) in ((-18.5, -7.0), (18.5, -7.0)):
+        s.add(aux_engine_bell(3.4, 11.0, (vx, vy, L / 2.0 - 11.0), group="engine_nozzle",
+                              segments=8, bell_mat="deck_dark"))
 
-    # ---- wings: bridge side platforms + stern stabilisers ----------------
-    s.add_pair_at(swept_fin(14.0, 1.6, 12.0, sweep=0.45, rise=2.2, mat="hull_grey",
-                            group="wing"), (6.5, base + 26.0, bz + 6.0))
+    # ---- Type 94 depth-charge launchers, aft ------------------------------
+    for sgn in (1.0, -1.0):
+        s.add(depth_charge_rack((sgn * 12.5, dy(116.0) + 1.0, 116.0)))
+
+    # ---- wings: the stowed delta main wings + stern stabilisers -----------
+    #  Canon main wings are huge and they FOLD.  SPEC 5 rule 7 pins the model's
+    #  X extent to beamM, so they are authored folded against the flanks, which
+    #  is also their space-cruise state; the outer face is held just inside the
+    #  belt radius so the X extent stays exactly 48.  Deploying them would need
+    #  beamM redefined as "hull beam plus wing-span allowance".
+    for sgn in (1.0, -1.0):
+        wing = stowed_delta_wing(15.0, 32.0, 12.0, 2.6, (22.6, -2.0, 4.0),
+                                 cant=0.12, sweep=0.44)
+        if sgn < 0:
+            wing.mirror_x()
+        s.add(wing)
     s.add_pair_at(swept_fin(9.0, 1.2, 8.0, sweep=0.35, rise=1.0, mat="hull_grey",
                             group="wing"), (12.0, 4.0, S(0.925)))
 
     # ---- radiators -------------------------------------------------------
     s.add_pair_at(box(0.9, 12.0, 36.0, center=(0.0, 3.0, 0.0), mat="deck_dark",
-                      group="radiator"), (hx_at(secs, S(0.83), 2.0) * 0.94, 0.0,
+                      group="radiator"), (hx_at(secs, S(0.83), 8.0) * 0.99, 8.0,
                                           S(0.83)))
 
 
 def build_andromeda(s):
-    """Andromeda-class vanguard battleship (AAA-1).
+    """Andromeda-class vanguard battleship (AAA-1) - the "bigger, meaner Yamato".
 
-    Same UNCF language as Yamato but longer, sleeker and squarer: raked bow with
-    TWIN wave-motion-gun muzzles, two superfiring triple turrets forward and two
-    aft, a blocky citadel ringed by shock-field emitters, 1 large + 4 medium
-    Kelvin nozzles.
+    Rebuilt on the same layout grammar as the Yamato (docs/research/01 section
+    1.2 for this hull, 05 for the grammar), keeping the UNCF family resemblance
+    so the two read as the same navy: raked bow, twin wave-motion-gun muzzles,
+    four triple 40.6 cm turrets ALL on the centreline (A/B superfiring forward,
+    C/D aft with D superfiring over C), a blocky slab-sided citadel rather than a
+    pagoda, the two six-barrel lateral beam projectors on the flanks, the three
+    bridge shock-field guns, hull-port torpedoes and the 1 + 4 Kelvin nozzle
+    cluster.
+
+    Deliberate deviations, all documented at the point of use:
+    * the citadel sits at station 0.37, not the research's 0.32, so its
+      49 m-wide base clears turret B's gun house - on this hull the two cannot
+      both be at their published stations;
+    * the twin muzzles are at +/-18.5 m, not the research's +/-24 m, because a
+      20 m muzzle at +/-24 m would put the collars 6 m outside beamM/2 and break
+      SPEC 5 rule 7 (X extent == beamM);
+    * the contract requires two `turret_secondary` mounts and canon gives this
+      hull no 20 cm secondary at all, so that family carries her two quad
+      anti-ship grenade projectors (四連装対艦グレネード投射機 x2).
     """
     L, B = s.L, s.B
     S = lambda t: (t - 0.5) * L                       # noqa: E731
@@ -2497,31 +2866,42 @@ def build_andromeda(s):
     s.rake = make_rake(L, -L / 2.0, L / 2.0, 16.2, -10.6, bow_r=24.0, bow_p=1.7,
                        bow_fade=0.26, stern_r=8.0, stern_p=1.8, stern_fade=0.18)
 
+    def raked(p):
+        """Author a hull-fitting hardpoint where the rake will actually put it."""
+        return (p[0], p[1], p[2] + s.rake(p[1], p[2]))
+
     # ---- broad raked bow carrying twin WM muzzles ------------------------
+    #  The twin muzzle is this ship's whole identity (research 01 section 1.2),
+    #  so both emitters and the raised centre rib between them are modelled even
+    #  though it costs two collar rings.
     s.add(frustum_box(50.0, 26.0, 34.0, center=(0.0, 1.0, S(0.06)),
                       scale_top=(0.62, 0.72), top_offset=(0.0, 6.0),
                       mat="hull_grey", group="hull"))
-    for i, mx in enumerate((-13.0, 13.0)):
-        s.add(bow_gun(10.5, 38.0, -L / 2.0, y=1.4, segments=26, collar=12.4,
-                      housing_mat="hull_grey", collar_mat="gun_metal"))
-        for p in s.parts[-4:]:
-            p.translate((mx, 0.0, 0.0))
+    for i, mx in enumerate((-18.5, 18.5)):
+        gun = bow_gun(9.6, 40.0, -L / 2.0, y=1.4, segments=24, collar=11.4,
+                      housing_mat="hull_grey", collar_mat="gun_metal")
+        xf_translate(gun, (mx, 0.0, 0.0))
+        s.add(gun)
         s.hp("wave_motion_gun" if i == 0 else "wave_motion_gun_2", "wmgun",
              (mx, 1.4, S(0.05)), (0.0, 0.0, -1.0))
     s.add(frustum_box(9.0, 20.0, 30.0, center=(0.0, 1.0, S(0.035)),
                       scale_top=(0.5, 0.7), mat="hull_grey", group="hull"))
 
-    # ---- superfiring forward pair + raised aft pair ----------------------
-    for i, (st, raise_) in enumerate(((0.135, 0.0), (0.275, 9.5))):
+    # ---- four triple 40.6 cm, ALL centreline: A/B forward, C/D aft --------
+    #  Canon stations A 0.13 / B 0.30 / C 0.62 / D 0.80 with D superfiring over
+    #  C.  B is pulled to 0.29 so its gun house clears the citadel, and C/D are
+    #  the right way round (the old model had C raised and D on the deck).
+    for i, (st, raise_) in enumerate(((0.135, 0.0), (0.290, 10.5))):
         zz = S(st)
         d = dy(zz) + raise_
         if raise_:
-            s.add(frustum_box(46.0, raise_, 48.0, center=(0.0, dy(zz) + raise_ / 2.0, zz),
+            s.add(frustum_box(40.0, raise_, 40.0, center=(0.0, dy(zz) + raise_ / 2.0, zz),
                               scale_top=(0.9, 0.93), mat="hull_grey",
                               group="superstructure"))
         mount_turret(s, "turret_main_%d" % (i + 1), "turret_main", d, zz,
-                     11.0, 4.2, (28.0, 10.0, 30.0), 3, 2.4, 24.0, elev=0.05)
-    for i, (st, raise_) in enumerate(((0.720, 6.0), (0.860, 0.0))):
+                     11.0, 4.2, (28.0, 10.0, 30.0), 3, 2.4, 24.0, elev=0.05,
+                     muzzle_ring=False)
+    for i, (st, raise_) in enumerate(((0.620, 0.0), (0.800, 6.5))):
         zz = S(st)
         d = dy(zz) + raise_
         if raise_:
@@ -2529,10 +2909,17 @@ def build_andromeda(s):
                               scale_top=(0.9, 0.93), mat="hull_grey",
                               group="superstructure"))
         mount_turret(s, "turret_main_%d" % (i + 3), "turret_main", d, zz,
-                     11.0, 4.2, (28.0, 10.0, 30.0), 3, 2.4, 24.0, aft=True, elev=0.05)
+                     11.0, 4.2, (28.0, 10.0, 30.0), 3, 2.4, 24.0, aft=True, elev=0.05,
+                     muzzle_ring=False)
 
     # ---- blocky citadel with shock-field emitters ------------------------
     bz = S(0.320)
+    # ---- blocky citadel, ringed by the three shock-field guns ------------
+    #  Station 0.37 rather than the research's 0.32: the citadel's base is 49 m
+    #  wide and 34 m long, and at 0.32 its forward top corner runs into turret
+    #  B's gun house.  The two published stations cannot both hold on this hull,
+    #  and the turret is the more visible of the two, so the citadel moves.
+    bz = S(0.370)
     base = dy(bz)
     y = base
     for (tw, th, tl) in ((40.0, 12.0, 34.0), (30.0, 9.0, 26.0), (20.0, 7.0, 17.0)):
@@ -2541,24 +2928,34 @@ def build_andromeda(s):
         s.add(box(tw + 4.0, 1.4, tl + 4.0, center=(0.0, y + 0.7, bz),
                   mat="deck_dark", group="bridge"))
         s.add(window_grid((0.0, y + th * 0.62, bz - tl / 2.0), "-z", tw * 0.7, 1.8,
-                          1, max(3, int(tw / 9.0)), win=(3.4, 2.2), group="bridge"))
+                          1, 3, win=(3.4, 2.2), group="bridge"))
         s.add(window_grid((tw / 2.0, y + th * 0.62, bz), "x", tl * 0.64, 1.8, 1,
-                          max(3, int(tl / 12.0)), win=(3.4, 2.2), group="bridge"))
+                          3, win=(3.4, 2.2), group="bridge"))
         s.add(window_grid((-tw / 2.0, y + th * 0.62, bz), "-x", tl * 0.64, 1.8, 1,
-                          max(3, int(tl / 12.0)), win=(3.4, 2.2), group="bridge"))
+                          3, win=(3.4, 2.2), group="bridge"))
         y += th
     s.add(frustum_box(12.0, 4.5, 13.0, center=(0.0, y + 2.25, bz - 1.0),
                       scale_top=(0.75, 0.8), mat="hull_grey", group="bridge"))
     s.add_at(mast(16.0, 1.2, segments=6, arms=2, dish_r=5.0), (0.0, y + 4.0, bz - 1.0))
+    # 司令塔防護ショックフィールド砲 x3 - three defensive emitters ringing the
+    # citadel, evenly spaced at 120 degrees (research 01 section 1.2 calls them
+    # out as "a great detail").  They ship in the merged anti_air battery: they
+    # are tower-defence guns, which is exactly what that group is for.
     for k in range(3):
         ang = math.pi * 2.0 * k / 3.0 + math.pi / 6.0
-        em = [ring(1.8, 3.0, 1.6, axis="y", center=(0.0, 1.4, 0.0), segments=12,
-                   mat="gun_metal", group="bridge"),
-              cylinder(1.7, 6.0, axis="y", center=(0.0, 3.4, 0.0), segments=12,
-                       mat="deck_dark", group="bridge")]
-        s.add_at(em, (17.0 * math.cos(ang), base + 2.0, bz + 17.0 * math.sin(ang)))
+        ex, ez = 19.0 * math.cos(ang), bz + 19.0 * math.sin(ang)
+        s.add(box(5.0, 2.0, 5.6, center=(ex, base + 1.0, ez), mat="hull_grey",
+                  group="superstructure"))
+        parts = pulse_laser_mount("tower_gun", group="anti_air", scale=1.25)
+        xf_translate(parts, (ex, base + 2.0, ez))
+        s.add(parts)
+        s.hp("anti_air_%d" % (k + 1), "anti_air", (ex, base + 2.0, ez),
+             (math.cos(ang) * 0.5, 0.0, math.sin(ang) * 0.5 - 0.5))
 
     # ---- six-barrel lateral beam projectors ------------------------------
+    #  六連装側方光線投射砲 x2 on the flanks at station 0.50 (research 01
+    #  section 1.2).  They are fixed outboard-facing clusters, not turrets, so
+    #  they stay in `superstructure` and never take an indexed name.
     for sgn in (1.0, -1.0):
         zz = S(0.500)
         x = 0.40 * B
@@ -2569,23 +2966,65 @@ def build_andromeda(s):
                                                        dy(zz) + 4.0 - k * 1.5, zz),
                            segments=7, mat="gun_metal", group="superstructure",
                            smooth=True))
-    # wing secondaries + sponson AA
-    for i, st in enumerate((0.400, 0.680)):
-        zz = S(st)
-        x = hx_at(secs, zz, dy(zz) - 1.0) * 0.78
-        for sgn in (1.0, -1.0):
-            s.add(box(12.0, 3.2, 16.0, center=(sgn * x, dy(zz) - 1.6, zz),
-                      mat="hull_grey", group="superstructure"))
-            mount_turret(s, "turret_secondary_%d" % (2 * i + (1 if sgn > 0 else 2)),
-                         "turret_secondary", dy(zz) + 0.2, zz, 5.0, 3.0,
-                         (11.0, 5.0, 12.0), 2, 1.1, 13.0, x=sgn * x, elev=0.10)
-    for i, (st, sgn) in enumerate(((0.200, 1.0), (0.200, -1.0), (0.520, 1.0),
-                                   (0.520, -1.0), (0.820, 1.0), (0.820, -1.0))):
+
+    # ---- SECONDARY FAMILY: the two quad anti-ship grenade projectors ------
+    #  Canon gives this hull no 20 cm secondary, but SPEC 5's required mix wants
+    #  at least two `turret_secondary` mounts on every ship, so the family
+    #  carries her 四連装対艦グレネード投射機 x2 - the closest canon pair - on
+    #  the centreline, one on the long deckhouse forward of turret C and one
+    #  between C and D.  Documented rather than silently invented.  #1 sits at
+    #  z = -8 on the long deckhouse roof, forward of the funnels (its barrels
+    #  train aft to z = +11, and funnel 1's base starts at +18.6).
+    mount_turret(s, "turret_secondary_1", "turret_secondary", dy(S(0.45)) + 6.0,
+                 -8.0, 4.6, 3.0, (11.0, 4.6, 12.0), 4, 0.9, 10.0,
+                 aft=True, elev=0.10, muzzle_ring=False)
+    mount_turret(s, "turret_secondary_2", "turret_secondary", dy(S(0.710)) + 0.2,
+                 S(0.710), 4.6, 3.0, (11.0, 4.6, 12.0), 4, 0.9, 10.0,
+                 aft=True, elev=0.10, muzzle_ring=False)
+
+    # ---- AA: four traversable PD mounts + the three tower guns ------------
+    #  Canon lists no pulse-laser battery for this hull, so the only AA mounts
+    #  modelled are the four point-defence channels CONFIG gives her
+    #  (pdMounts = 4) plus the three citadel shock-field guns above.
+    for i, (st, sgn) in enumerate(((0.200, 1.0), (0.200, -1.0), (0.780, 1.0),
+                                   (0.780, -1.0))):
         zz = S(st)
         x = hx_at(secs, zz, dy(zz) - 0.5) * 0.88
-        s.add(box(6.5, 2.0, 7.5, center=(sgn * x, dy(zz) - 1.0, zz), mat="hull_grey",
+        s.add(box(7.4, 2.4, 8.8, center=(sgn * x, dy(zz) - 1.2, zz), mat="hull_grey",
                   group="superstructure"))
-        mount_aa(s, "ciws_%d" % (i + 1), dy(zz) + 0.1, zz, sgn * x, scale=1.05)
+        mount_pulse_laser(s, "ciws_%d" % (i + 1), dy(zz) + 0.1, zz, sgn * x,
+                          form="quad_127")
+
+    # ---- torpedo battery: 8 hull openings --------------------------------
+    #  速射魚雷発射管 x4 forward + 亜空間魚雷発射装置 x4 aft (research 01
+    #  section 1.2), modelled as ports flush with the plating exactly as the
+    #  Yamato's are - they are holes, so they take the merged `torpedo_tube`
+    #  group and carry their direction in the hardpoint.
+    def tube(z, sgn, y, direction, name, radius=2.8):
+        face_x = hx_at(secs, z, y) * BELT_SCALE
+        cx = sgn * (face_x - 0.7)
+        s.add(hull_port(radius, (cx, y, z), axis="x", depth=1.4,
+                        group="torpedo_tube", segments=5))
+        s.hp(name, "torpedo", raked((cx, y, z)), direction)
+
+    for i, zz in enumerate((S(0.085), S(0.135))):
+        for sgn in (1.0, -1.0):
+            tube(zz, sgn, 1.0, (sgn * 0.22, 0.0, -1.0),
+                 "torpedo_tube_fore_%d%s" % (i + 1, "" if sgn > 0 else "_s"))
+    for i, zz in enumerate((S(0.870), S(0.925))):
+        for sgn in (1.0, -1.0):
+            tube(zz, sgn, 1.0, (sgn * 0.22, 0.0, 1.0),
+                 "torpedo_tube_aft_%d%s" % (i + 1, "" if sgn > 0 else "_s"))
+
+    # ---- 重力子スプレッド発射機 x4: four graviton spread launchers -------
+    for i, (st, sgn) in enumerate(((0.430, 1.0), (0.430, -1.0),
+                                   (0.545, 1.0), (0.545, -1.0))):
+        zz = S(st)
+        x = hx_at(secs, zz, dy(zz) + 3.0) * 0.80
+        s.add(missile_cell_box(2, 2, 1.0, 2.6, (sgn * x, dy(zz) + 6.6, zz),
+                               face="-z"))
+        s.hp("missile_launcher_%d" % (i + 1), "missile",
+             (sgn * x, dy(zz) + 6.6, zz - 3.0), (0.0, 0.0, -1.0))
 
     # ---- long flat deckhouse + funnel + aft catapult ---------------------
     s.add(frustum_box(30.0, 6.0, 120.0, center=(0.0, dy(S(0.45)) + 3.0, S(0.45)),
@@ -2612,10 +3051,18 @@ def build_andromeda(s):
                       mat="hull_grey", group="engine_nozzle"))
     engine_cluster(s, [(0.0, 0.0)], 20.0, 24.0, L / 2.0, names=("engine_1",),
                    segments=24, bell_mat="hull_grey")
-    engine_cluster(s, [(-10.0, 9.0), (10.0, 9.0), (-10.0, -9.0), (10.0, -9.0)],
-                   9.6, 18.0, L / 2.0,
-                   names=("engine_2", "engine_3", "engine_4", "engine_5"),
-                   segments=12, bell_mat="deck_dark")
+    # the four Kelvin impulse nozzles (ケルビンインパルスエンジン x4, [OFFICIAL]):
+    # the auxiliary drive, so they read as smaller bells around the one big one.
+    # They use the compact aux bell rather than the full nozzle() stack - at
+    # 9.6 m across they are 1/2 the diameter of the main bell and a vane ring,
+    # an actuator ring and a throat on each cost ~300 triangles apiece for
+    # detail that does not resolve.
+    for i, (vx, vy) in enumerate(((-10.0, 9.0), (10.0, 9.0),
+                                  (-10.0, -9.0), (10.0, -9.0))):
+        s.add(aux_engine_bell(9.6, 18.0, (vx, vy, L / 2.0 - 9.0),
+                              group="engine_nozzle", segments=12,
+                              bell_mat="deck_dark"))
+        s.hp("engine_%d" % (i + 2), "thruster", (vx, vy, L / 2.0 - 9.0), (0.0, 0.0, 1.0))
     s.add_pair_at(swept_fin(16.0, 1.6, 14.0, sweep=0.45, rise=2.4, mat="hull_grey",
                             group="wing"), (7.0, base + 30.0, bz + 8.0))
     s.add_pair_at(swept_fin(11.0, 1.3, 10.0, sweep=0.4, rise=1.2, mat="hull_grey",
@@ -3250,30 +3697,39 @@ def _detail_yamato(s, secs, deck, S):
 
     Sized against the chase camera (~355 m, 1 px ~ 0.17 m): seams are 2.8 m
     bands standing 0.5 m proud, windows 2.8 x 1.9 m, so all of it still reads.
+
+    Thinned for the 2199 rebuild: the armament IS the silhouette now (a
+    42-mount pulse-laser battery, 28 torpedo ports, the ventral third bridge),
+    and it costs ~2.6 k triangles, so the surface pass gives up ~760 of its own
+    - one strake line instead of two, five seams instead of seven, and window
+    rows at chase-camera spacing rather than one every 15 m.  Nothing here is
+    dropped: it is the same detail language at a lower density.
     """
-    frame_rings(s, secs, [S(t) for t in (0.12, 0.22, 0.32, 0.44, 0.55, 0.68,
-                                         0.82)], 1.6, "deck_dark")
-    strake_lines(s, secs, [deck - 5.5, deck - 9.0], 0.8, 1.5, "deck_dark")
+    # S(0.55) MUST stay in this list: the prismatic seam band is what pins the
+    # ship's beam, and 0.55 is the full-beam station.  Dropping it takes the X
+    # extent to 47.78 and the model no longer matches beamM exactly.
+    frame_rings(s, secs, [S(t) for t in (0.12, 0.28, 0.42, 0.55, 0.70, 0.84)], 1.6,
+                "deck_dark")
+    strake_lines(s, secs, [deck - 6.5], 0.8, 1.5, "deck_dark")
     armour_belt(s, secs, S(0.30), S(0.62), -12.0, -8.4, "hull_black", ribs=True,
                 rib_mat="deck_dark", out_scale=1.016)
-    window_row(s, secs, deck - 4.2, S(0.12), S(0.92), 18, win=(2.8, 1.9))
-    window_row(s, secs, deck - 1.8, S(0.52), S(0.90), 8, win=(2.8, 1.9))
-    s.add(window_grid((17.0, deck + 4.0, S(0.40)), "x", 60.0, 2.6, 1, 8,
+    window_row(s, secs, deck - 4.2, S(0.12), S(0.92), 12, win=(2.8, 1.9))
+    window_row(s, secs, deck - 1.8, S(0.52), S(0.90), 5, win=(2.8, 1.9))
+    s.add(window_grid((17.0, deck + 4.0, S(0.40)), "x", 60.0, 2.6, 1, 5,
                       win=(3.0, 2.0), group="superstructure"))
-    s.add(window_grid((-17.0, deck + 4.0, S(0.40)), "-x", 60.0, 2.6, 1, 8,
+    s.add(window_grid((-17.0, deck + 4.0, S(0.40)), "-x", 60.0, 2.6, 1, 5,
                       win=(3.0, 2.0), group="superstructure"))
-    s.add(window_grid((16.0, deck + 3.0, S(0.90)), "x", 22.0, 2.2, 1, 4,
+    s.add(window_grid((16.0, deck + 3.0, S(0.90)), "x", 22.0, 2.2, 1, 3,
                       win=(3.0, 2.0), group="superstructure"))
-    s.add(window_grid((-16.0, deck + 3.0, S(0.90)), "-x", 22.0, 2.2, 1, 4,
+    s.add(window_grid((-16.0, deck + 3.0, S(0.90)), "-x", 22.0, 2.2, 1, 3,
                       win=(3.0, 2.0), group="superstructure"))
-    hatch_row(s, S(0.44), S(0.78), 8, deck + 0.6, size=(3.6, 0.7, 4.6))
-    lifeboat_rack(s, secs, deck - 4.0, S(0.48), S(0.72), 3)
+    hatch_row(s, S(0.44), S(0.78), 5, deck + 0.6, size=(3.6, 0.7, 4.6))
+    lifeboat_rack(s, secs, deck - 4.0, S(0.48), S(0.72), 2)
     deck_crane(s, (0.0, deck + 0.5, S(0.86)), 10.0)
     sensor_dome(s, 3.2, (0.0, deck + 0.4, S(0.825)))
     cable_run(s, secs, deck - 2.4, S(0.18), S(0.86), count=1)
     light_points(s, [(0.0, deck + 1.2, S(0.075)), (0.0, deck + 1.2, S(0.955)),
-                     (12.0, deck + 1.2, S(0.60)), (-12.0, deck + 1.2, S(0.60))],
-                 radius=1.8)
+                     (12.0, deck + 1.2, S(0.60))], radius=1.8)
 
 
 def _detail_andromeda(s, secs, deck, S):
