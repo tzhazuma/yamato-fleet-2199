@@ -62,6 +62,15 @@ def is_group(name):
     return name in GROUPS or bool(_TURRET_RE.match(name))
 
 
+#: Fixed (merged) part groups.  A part that does NOT rotate keeps one of these
+#: names even when it is a weapon: the indexed names above are not a naming
+#: convention, they are a PROMISE that the geometry is authored on its own
+#: traverse pivot and that a hardpoint of the same name exists to place it.  A
+#: torpedo port is a flush opening in the plating and a ventral missile tube is
+#: welded into the keel - neither ever turns, so both ship as merged groups and
+#: carry their direction in the hardpoint ``dir`` instead.  Naming them
+#: ``torpedo_tube_3`` would drag them into the pivot contract (and correctly
+#: fail it), which is why the 2199 rebuild splits the vocabulary this way.
 GROUPS = (
     "hull",
     "superstructure",
@@ -72,6 +81,15 @@ GROUPS = (
     "turret_secondary",
     "wing",
     "radiator",
+    # 2199 armament-layout groups (docs/research/05-yamato-armament-layout.md):
+    "anti_air",          # pulse-laser battery that is not individually traversable
+    "torpedo_tube",      # hull torpedo ports (6 fore + 6 aft + 8 per side)
+    "missile_launcher",  # ventral tubes, the eight-barrel box, the funnel launcher
+    "third_bridge",      # the ventral sub-bridge pod under the command tower
+    "catapult",          # aft aircraft-deck catapult
+    "rocket_anchor",     # bow rocket anchors
+    "aux_engine",        # the two auxiliary engines (secondary thrusters)
+    "depth_charge",      # Type 94 depth-charge launchers
 )
 
 #: Fixed material NAME palette (SPEC 5.5).  Values are the faction hexes from
@@ -184,7 +202,11 @@ MATERIAL_ORDER = (
     "hull_black", "bolar_blue",
 )
 
-HARDPOINT_KINDS = ("wmgun", "turret", "thruster", "anti_air")
+#: ``torpedo`` / ``missile`` are the kinds ``src/core/assets.js`` synthesises for
+#: the tube and launcher families, so an authored hardpoint uses the same names
+#: the fallback path would have produced rather than inventing a parallel set.
+HARDPOINT_KINDS = ("wmgun", "turret", "thruster", "anti_air", "torpedo",
+                   "missile")
 
 #: The hull loft is inset by RELIEF so that the raised detail ribbons (transverse
 #: seams) land EXACTLY on beamM / 2 at the widest station: the relief defines the
@@ -1962,6 +1984,253 @@ def mount_aa(s, name, deck_y, z, x, scale=1.0, group=None):
                               mat="gun_metal", group=name, caps=False, smooth=True))
     s.add(parts)
     s.hp(name, "anti_air", (x, deck_y, z), (0.0, 0.0, -1.0))
+    return parts
+
+
+#: The 2199 pulse-laser battery is 40 mounts of FIVE different types
+#: (docs/research/05 section 3), which is only affordable as one shared low-poly
+#: form scaled per type.  At the chase camera (~355 m, 1 px ~ 0.17 m) a mount is
+#: ~20 px across, so the form stops at pedestal + gun house + barrel cluster: a
+#: base ring, a training drum and a mantlet would cost 3x the triangles for
+#: detail that never resolves.  Measured cost per mount, 4-sided barrels:
+#:   quad_127 56, triple_88 48, twin_127 40, twin_75 28, triple_75 48, tower 28
+#: which puts the whole 42-mount battery (40 pulse lasers + the 2 conning-tower
+#: firearms) at ~1.6 k triangles - the biggest single line item of the rebuild,
+#: and the one the user's "under-armed" read was actually about.
+AA_FORMS = {
+    #            pedestal (w, h)   house (w, h)   barrels  len   r
+    "quad_127":  ((4.4, 1.6), (3.4, 1.5), 4, 4.8, 0.34),
+    "triple_88": ((3.6, 1.3), (2.8, 1.2), 3, 4.0, 0.28),
+    "twin_127":  ((3.8, 1.4), (3.0, 1.3), 2, 4.4, 0.32),
+    "twin_75":   ((3.0, 1.1), None, 2, 3.4, 0.24),
+    "triple_75": ((3.2, 1.2), (2.4, 1.1), 3, 3.6, 0.24),
+    "tower_gun": ((2.4, 1.0), None, 2, 2.8, 0.22),
+}
+
+
+def pulse_laser_mount(form="twin_75", group="anti_air", scale=1.0,
+                      pedestal_mat="gun_metal", house_mat="hull_grey",
+                      barrel_mat="gun_metal"):
+    """One pulse-laser mount, built at the origin with its base on y=0.
+
+    Authored on its own pivot (pedestal centred on x = z = 0, y = 0 at the deck
+    line) so the SAME form serves the four traversable ``ciws_*`` mounts and the
+    merged ``anti_air`` battery: the renderer places an indexed one at its
+    hardpoint and traverses it, while the merged ones are baked in place by the
+    caller.  Barrels point -Z, i.e. trained fore-and-aft at traverse 0.
+    """
+    pw, ph = AA_FORMS[form][0]
+    house = AA_FORMS[form][1]
+    barrels, blen, br = AA_FORMS[form][2:]
+    pw, ph = pw * scale, ph * scale
+    parts = [frustum_box(pw, ph, pw, center=(0.0, ph / 2.0, 0.0),
+                         scale_top=(0.88, 0.88), mat=pedestal_mat, group=group)]
+    deck = ph
+    if house is not None:
+        hw, hh = house[0] * scale, house[1] * scale
+        parts.append(frustum_box(hw, hh, hw, center=(0.0, deck + hh / 2.0, 0.0),
+                                 scale_top=(0.82, 0.86), top_offset=(0.0, hw * 0.06),
+                                 mat=house_mat, group=group))
+        deck += hh
+    # barrel cluster: 4-sided tubes cost 8 triangles each and still read as a
+    # cluster of guns at this size, where a 10-sided tube would cost 20 for the
+    # same read
+    spread = br * 2.6 * scale
+    if barrels == 1:
+        offs = [0.0]
+    elif barrels == 2:
+        offs = [-spread, spread]
+    elif barrels == 3:
+        offs = [-spread * 1.5, 0.0, spread * 1.5]
+    else:
+        offs = [-spread * 1.6, -spread * 0.55, spread * 0.55, spread * 1.6]
+    by = deck + br * 1.1 * scale
+    for ox in offs:
+        parts.append(cylinder(br * scale, blen * scale, axis="z",
+                              center=(ox, by, -blen * scale * 0.42), segments=4,
+                              mat=barrel_mat, group=group, caps=False))
+    return parts
+
+
+def mount_pulse_laser(s, name, deck_y, z, x, form="twin_75", group=None,
+                      scale=1.0, dir_y=0.0):
+    """Indexed pulse-laser mount: geometry authored on its pivot + its hardpoint."""
+    group = group or name
+    parts = pulse_laser_mount(form, group=group, scale=scale)
+    s.add(parts)
+    s.hp(name, "anti_air", (x, deck_y, z), (0.0, dir_y, -1.0))
+    return parts
+
+
+def hull_port(radius, center, axis="z", depth=1.2, group="torpedo_tube",
+              mat="hull_black", segments=6):
+    """A flush hull opening - a torpedo tube or a ventral missile tube.
+
+    These are HOLES in the plating, not mounts (docs/research/05 section 3), so
+    they are authored in the hull surface and never move; the direction lives in
+    the hardpoint ``dir``.  The hull loft is opaque, so an opening can only be
+    shown as a dark face standing a little proud of the plating: at the chase
+    camera a dark hexagon reads as a hole, and a hexagonal tube costs 24
+    triangles against 72 for a ringed round one.
+    """
+    return cylinder(radius, depth, axis=axis, center=center, segments=segments,
+                    mat=mat, group=group, caps=True, smooth=False)
+
+
+def missile_cell_box(rows, cols, cell_r, cell_len, center, group="missile_launcher",
+                     body_mat="gun_metal", cell_mat="hull_black", face="-z",
+                     scale=(1.0, 1.0)):
+    """Box launcher with its tube mouths on one face (the eight-barrel launcher).
+
+    Canon gives one eight-barrel missile launcher without saying where it sits;
+    it is mounted on the aft superstructure roof, which is the least implausible
+    place for it and keeps it clear of the AA battery's deck space.
+    """
+    sx, sz = scale
+    bw = cols * cell_r * 2.6 * sx
+    bh = rows * cell_r * 2.6
+    bd = cell_len * 1.5 * sz
+    parts = [frustum_box(bw, bh, bd, center=center, scale_top=(0.94, 0.96),
+                         mat=body_mat, group=group)]
+    sgn = -1.0 if face == "-z" else 1.0
+    for r in range(rows):
+        for c in range(cols):
+            ox = ((c + 0.5) / cols - 0.5) * bw * 0.78
+            oy = ((r + 0.5) / rows - 0.5) * bh * 0.78
+            parts.append(cylinder(cell_r, cell_len, axis="z", segments=5,
+                                  center=(center[0] + ox, center[1] + oy,
+                                          center[2] + sgn * (bd / 2.0
+                                                             + cell_len * 0.35)),
+                                  mat=cell_mat, group=group, caps=True))
+    return parts
+
+
+def rocket_anchor(center, scale=1.0, group="rocket_anchor", axis="z"):
+    """ロケットアンカー - the bow anchor that can be fired into an enemy hull.
+
+    One each side of the bow (docs/research/05 section 2).  Modelled as the
+    stowed fitting - a hawse housing in the plating with the anchor body seated
+    in it - because that is the state the ship is in for the whole demo.
+    """
+    hx, hy, hz = center
+    return [
+        frustum_box(4.6 * scale, 3.4 * scale, 5.4 * scale,
+                    center=(hx, hy, hz), scale_top=(0.86, 0.9),
+                    mat="hull_grey", group=group),
+        cylinder(1.5 * scale, 4.4 * scale, axis=axis,
+                 center=(hx, hy - 0.4 * scale, hz), segments=6,
+                 mat="gun_metal", group=group, caps=True),
+        box(2.6 * scale, 1.2 * scale, 2.6 * scale,
+            center=(hx, hy - 2.0 * scale, hz), mat="gun_metal", group=group),
+    ]
+
+
+def depth_charge_rack(center, group="depth_charge", scale=1.0):
+    """Type 94 depth-charge launcher: a short rail with a stack of charges."""
+    cx, cy, cz = center
+    return [
+        box(3.2 * scale, 0.8 * scale, 7.0 * scale, center=(cx, cy, cz),
+            mat="gun_metal", group=group),
+        box(2.6 * scale, 2.2 * scale, 2.6 * scale,
+            center=(cx, cy + 1.4 * scale, cz - 1.6 * scale), mat="deck_dark",
+            group=group),
+        box(2.6 * scale, 2.2 * scale, 2.6 * scale,
+            center=(cx, cy + 1.4 * scale, cz + 1.6 * scale), mat="deck_dark",
+            group=group),
+    ]
+
+
+def stowed_delta_wing(span, root_chord, tip_chord, thickness, base, cant=0.30,
+                      sweep=0.45, fold=0.45, group="wing", mat="hull_grey",
+                      fold_mat="deck_dark"):
+    """A large delta main wing in its RETRACTED (folded) state.
+
+    Canon: 収納式の巨大なデルタ翼型主翼 - huge delta wings that fold, one each
+    side (docs/research/05 section 2).  They are modelled FOLDED because SPEC 5
+    rule 7 pins the model's X extent to ``beamM`` (48 m): a deployed 60 m wing
+    would double the ship's beam and break the contract for every consumer that
+    reads ``beamM``.  Folded, the wing still reads in the SIDE view as a big
+    angular plate sweeping up and aft off the flank, which is the view the
+    silhouette is judged in.  Two panels: the inboard root, and the outboard
+    section folded back against it.
+    """
+    bx, by, bz = base
+    root_h = span * fold
+    outer_h = span * (1.0 - fold)
+    root = frustum_box(thickness, root_h, root_chord,
+                       center=(0.0, root_h / 2.0, 0.0),
+                       scale_top=(0.92, tip_chord / root_chord),
+                       top_offset=(0.0, -sweep * root_chord),
+                       mat=mat, group=group)
+    root.rotate_z(cant)
+    root.translate((bx, by, bz))
+    outer = frustum_box(thickness * 0.85, outer_h, root_chord * 0.72,
+                        center=(0.0, outer_h / 2.0, 0.0),
+                        scale_top=(0.9, tip_chord / (root_chord * 0.72) * 0.6),
+                        top_offset=(0.0, -sweep * root_chord * 0.8),
+                        mat=fold_mat, group=group)
+    outer.rotate_z(cant * 2.4)
+    outer.translate((bx + root_h * math.sin(cant) + 0.4,
+                     by + root_h * math.cos(cant),
+                     bz - sweep * root_chord * 0.9))
+    return [root, outer]
+
+
+def aux_engine_bell(radius, length, center, group="aux_engine", segments=10,
+                    bell_mat="hull_grey", glow=True):
+    """A compact auxiliary-engine bell.
+
+    The two auxiliary engines are SEPARATE from the main wave-motion engine, they
+    double as secondary thrusters and they are what starts the wave engine
+    (docs/research/05 section 2) - so they read as a second, smaller pair of
+    bells with their own glow, not as decoration on the main cluster.
+    """
+    parts = [cylinder(radius * 0.55, length, axis="z", center=center,
+                      segments=segments, radius2=radius, mat=bell_mat, group=group,
+                      caps=False, smooth=True)]
+    if glow:
+        parts.append(disc(radius * 0.62, 1.2, axis="z",
+                          center=(center[0], center[1], center[2] + length * 0.5),
+                          segments=segments, mat="engine_glow", group=group))
+    return parts
+
+
+def third_bridge_pod(z, y_top, y_bottom, width, length, group="third_bridge",
+                     pod_mat="hull_grey", window=True):
+    """The ventral third bridge (第三艦橋) - the pod hanging UNDER the hull.
+
+    Canon (JA 艦体解説, docs/research/05 section 2): the command tower stacks
+    captain's cabin -> first bridge (10 m below it) -> second bridge -> third
+    bridge, and the third bridge protrudes from the BOTTOM of the hull directly
+    beneath the tower.  It is the sub-bridge / backup for the first bridge, the
+    most distinctive single feature of the ship, and the 2199 Yamato does not
+    look like itself without it - which is why it gets its own group and its own
+    assertion (it must measure BELOW the hull group's lowest vertex).
+    """
+    h = y_top - y_bottom
+    cy = (y_top + y_bottom) / 2.0
+    parts = [frustum_box(width, h, length, center=(0.0, cy, z),
+                         scale_bottom=(0.52, 0.68), scale_top=(1.0, 1.0),
+                         mat=pod_mat, group=group)]
+    # downward sensor blister + the observation band: the pod is a BRIDGE, so it
+    # needs glazing on the face that looks where the hull cannot see
+    parts.append(cylinder(width * 0.30, 2.4, axis="y",
+                          center=(0.0, y_bottom - 0.6, z), segments=8,
+                          radius2=width * 0.20, mat="deck_dark", group=group))
+    if window:
+        for oz in (-length * 0.26, 0.0, length * 0.26):
+            parts.append(box(width * 0.62, 1.6, 2.6,
+                             center=(0.0, y_bottom + h * 0.30, z + oz),
+                             mat="glass_blue", group=group))
+        for sgn in (1.0, -1.0):
+            parts.append(box(1.4, 1.8, length * 0.44,
+                             center=(sgn * width * 0.30, cy, z),
+                             mat="glass_blue", group=group))
+    # two stabilising fins, so the pod does not read as a dropped box
+    for sgn in (1.0, -1.0):
+        parts.append(frustum_box(1.2, 2.6, length * 0.55,
+                                 center=(sgn * width * 0.46, y_bottom + h * 0.42, z),
+                                 scale_top=(0.7, 0.8), mat="deck_dark", group=group))
     return parts
 
 

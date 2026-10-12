@@ -54,43 +54,63 @@ const OUT_DIR = resolve(HERE, '..', 'assets', 'audio');
  */
 const CATALOGUE = [
   {
-    id: 'holst-mars',
-    title: 'Holst — The Planets: Mars, the Bringer of War',
-    composer: 'Gustav Holst (1874-1934)',
+    id: 'usaf-stellar-brass',
+    title: 'Dance to the Spirits of Fire',
+    composer: 'Stellar Brass, United States Air Force Academy Band',
     status: 'pd',
     statusNote:
-      'Composition is public domain worldwide (Holst died 1934). This entry ' +
-      'expects a PD recording; verify the file page before relying on it.',
-    why: 'The obvious musical reference for "dreadnoughts in space".',
+      'Work of the US federal government — public domain in the United States. ' +
+      'Verified via the Wikimedia Commons API (LicenseShortName = "Public domain").',
+    why: 'Brass band, martial and forward-driving. Closest thing to a naval march.',
     source: 'Wikimedia Commons',
-    page: 'https://commons.wikimedia.org/wiki/Category:Audio_files_of_music_by_Gustav_Holst',
-    urls: [],
-    needsManualPick: true,
-  },
-  {
-    id: 'tchaikovsky-1812',
-    title: 'Tchaikovsky — 1812 Overture',
-    composer: 'Pyotr Ilyich Tchaikovsky (1840-1893)',
-    status: 'pd',
-    statusNote: 'Composition long out of copyright; recording status varies.',
-    why: 'Naval-gunnery energy; the finale is a literal artillery barrage.',
-    source: 'Wikimedia Commons',
-    page: 'https://commons.wikimedia.org/wiki/File:Pyotr_Ilyich_Tchaikovsky_-_1812_overture.ogg',
+    page: 'https://commons.wikimedia.org/wiki/File:Dance_to_the_Spirits_of_Fire_-_Stellar_Brass_-_United_States_Air_Force_Academy_Band.mp3',
     urls: [
-      'https://upload.wikimedia.org/wikipedia/commons/c/c5/Pyotr_Ilyich_Tchaikovsky_-_1812_overture.ogg',
+      'https://upload.wikimedia.org/wikipedia/commons/0/09/Dance_to_the_Spirits_of_Fire_-_Stellar_Brass_-_United_States_Air_Force_Academy_Band.mp3',
     ],
   },
   {
-    id: 'saint-saens-danse',
-    title: 'Saint-Saens — Danse Macabre',
-    composer: 'Camille Saint-Saens (1835-1921)',
+    id: 'usaf-first-suite-march',
+    title: 'First Suite in E-flat for Military Band — III. March',
+    composer: 'Gustav Holst, perf. United States Air Force Heritage of America Band',
     status: 'pd',
-    statusNote: 'Philadelphia Symphony Orchestra recording, PD by age.',
-    why: 'Tension and inevitability; good for a losing fight.',
+    statusNote:
+      'Holst died 1934 (composition PD) AND the recording is a US federal ' +
+      'government work. Commons API reports "Public domain" for the file.',
+    why: 'The march movement. Ideal for a fleet sortie.',
     source: 'Wikimedia Commons',
-    page: 'https://commons.wikimedia.org/wiki/File:PhiladelphiaSymphonyOrchestra-DanseMacabre.ogg',
+    page: 'https://commons.wikimedia.org/wiki/File:First_Suite_in_E-flat_for_Military_Band_-_III._March_-_Concert_Band_-_United_States_Air_Force_Heritage_of_America_Band.mp3',
     urls: [
-      'https://upload.wikimedia.org/wikipedia/commons/3/30/PhiladelphiaSymphonyOrchestra-DanseMacabre.ogg',
+      'https://upload.wikimedia.org/wikipedia/commons/f/f7/First_Suite_in_E-flat_for_Military_Band_-_III._March_-_Concert_Band_-_United_States_Air_Force_Heritage_of_America_Band.mp3',
+    ],
+  },
+  {
+    id: 'usaf-first-suite-chaconne',
+    title: 'First Suite in E-flat for Military Band — I. Chaconne',
+    composer: 'Gustav Holst, perf. United States Air Force Heritage of America Band',
+    status: 'pd',
+    statusNote: 'As above: PD composition, PD US-government recording.',
+    why: 'Slow, processional, ominous. Good for the boot screen or a defeat.',
+    source: 'Wikimedia Commons',
+    page: 'https://commons.wikimedia.org/wiki/File:First_Suite_in_E-flat_for_Military_Band_-_I._Chaconne_-_Concert_Band_-_United_States_Air_Force_Heritage_of_America_Band.mp3',
+    urls: [
+      'https://upload.wikimedia.org/wikipedia/commons/d/db/First_Suite_in_E-flat_for_Military_Band_-_I._Chaconne_-_Concert_Band_-_United_States_Air_Force_Heritage_of_America_Band.mp3',
+    ],
+  },
+  {
+    id: 'holst-mars',
+    title: 'The Planets, Op. 32 — I. Mars, the Bringer of War',
+    composer: 'Gustav Holst (1874-1934)',
+    status: 'cc-by',
+    statusNote:
+      'Commons API reports "Attribution" (CC BY). The composition is public ' +
+      'domain but THIS RECORDING is not, so it requires credit. The attribution ' +
+      'is written into assets/audio/THIRD_PARTY_AUDIO.md and into the manifest ' +
+      'this tool generates. Do not remove it.',
+    why: 'The obvious musical reference for dreadnoughts in space. 5/4, relentless.',
+    source: 'Wikimedia Commons',
+    page: 'https://commons.wikimedia.org/wiki/File:Gustav_Holst_-_the_planets,_op._32_-_i._mars,_the_bringer_of_war.ogg',
+    urls: [
+      'https://upload.wikimedia.org/wikipedia/commons/5/54/Gustav_Holst_-_the_planets%2C_op._32_-_i._mars%2C_the_bringer_of_war.ogg',
     ],
   },
   {
@@ -122,6 +142,18 @@ const CATALOGUE = [
     needsManualPick: true,
   },
 ];
+
+/**
+ * Licences this tool will fetch.
+ *   pd    — no obligations at all.
+ *   cc0   — no obligations at all.
+ *   cc-by — allowed ONLY because the attribution is recorded in the manifest and
+ *           in assets/audio/THIRD_PARTY_AUDIO.md. If you add a cc-by entry, add
+ *           its credit there too.
+ * Anything share-alike or non-commercial is refused outright: it would impose
+ * terms on the whole repository.
+ */
+const ALLOWED_LICENCES = new Set(['pd', 'cc0', 'cc-by']);
 
 const MAGIC = [
   { ext: 'ogg', test: (b) => b.subarray(0, 4).toString('latin1') === 'OggS' },

@@ -380,9 +380,30 @@ export class MusicEngine {
     this._externalTried = true;
     if (typeof fetch !== 'function' || typeof Audio === 'undefined') return;
     try {
-      const res = await fetch('./assets/audio/manifest.json', { cache: 'no-store' });
-      if (!res.ok) return;
-      const man = await res.json();
+      // An UNCLEARED playlist (copyrighted, downloaded for private local
+      // evaluation) is only ever used when explicitly asked for with
+      // `?uncleared=1`. It is never the default, it is gitignored, and a fresh
+      // clone has no such directory — so the shippable build always plays either
+      // the cleared recordings or the synthesised score. See THIRD_PARTY_AUDIO.md.
+      const wantUncleared = typeof location !== 'undefined'
+        && new URLSearchParams(location.search).has('uncleared');
+      const paths = wantUncleared
+        ? ['./assets/audio/uncleared/manifest.json', './assets/audio/manifest.json']
+        : ['./assets/audio/manifest.json'];
+      let man = null;
+      for (const path of paths) {
+        try {
+          const res = await fetch(path, { cache: 'no-store' });
+          if (!res.ok) continue;
+          const parsed = await res.json();
+          if (parsed && Array.isArray(parsed.tracks) && parsed.tracks.length) { man = parsed; break; }
+        } catch (_) { /* try the next one */ }
+      }
+      if (!man) return;
+      if (man.uncleared) {
+        console.warn('[music] playing UNCLEARED, copyrighted audio for local evaluation only — '
+          + 'never redistribute. See THIRD_PARTY_AUDIO.md.');
+      }
       const tracks = Array.isArray(man?.tracks) ? man.tracks.filter((t) => t && t.file) : [];
       if (!tracks.length) return;
       const el = new Audio();
@@ -390,7 +411,7 @@ export class MusicEngine {
       el.preload = 'auto';
       el.volume = Math.max(0, Math.min(1, this.volume));
       el.addEventListener('ended', () => this._nextExternal());
-      this._external = { el, tracks, idx: 0 };
+      this._external = { el, tracks, idx: 0, uncleared: !!man.uncleared };
       this._useExternal = true;
       this._nextExternal(true);
       console.info(`[music] using ${tracks.length} local recording(s) from assets/audio/manifest.json`);
@@ -405,7 +426,8 @@ export class MusicEngine {
     if (!first) x.idx = (x.idx + 1) % x.tracks.length;
     const t = x.tracks[x.idx];
     try {
-      x.el.src = './assets/audio/' + encodeURIComponent(t.file);
+      const base = x.uncleared ? './assets/audio/uncleared/' : './assets/audio/';
+      x.el.src = base + encodeURIComponent(t.file);
       const pr = x.el.play();
       if (pr && typeof pr.catch === 'function') pr.catch(() => {});
     } catch (_) { /* ignore */ }

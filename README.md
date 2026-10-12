@@ -45,6 +45,36 @@ Requirements: Node ≥ 20 (only to run the static server and the tests), Python 
 
 ---
 
+## Music
+
+The score is **synthesised at runtime** by `src/core/music.js` from oscillators —
+four cues (boot, battle, victory, defeat) picked from the match state, sharing
+the audio engine's context and master bus so the mute key and
+`CONFIG.audio.master` apply to music as well. It is original and needs no files,
+no network, and no licence.
+
+If you would rather hear real recordings, `tools/fetch_audio.mjs` downloads
+verified **public domain / CC0 / CC BY** tracks into `assets/audio/`, which is
+gitignored so nothing it fetches can enter the repository:
+
+```bash
+node tools/fetch_audio.mjs --list     # the catalogue, with every licence
+node tools/fetch_audio.mjs            # download what your network allows
+```
+
+It sniffs every download for a real audio container before writing, so an HTML
+error page never lands as an `.ogg`, and it writes a `manifest.json` that the
+music engine prefers over the synthesised score when present. **CC BY entries
+carry an obligation** — the required credit is recorded in
+[THIRD_PARTY_AUDIO.md](THIRD_PARTY_AUDIO.md) and travels in the manifest.
+
+`assets/audio/uncleared/` is for copyrighted material downloaded for private
+local evaluation only. It is gitignored, it is never distributed, and the demo
+falls back to the synthesised score wherever it is absent. See
+[THIRD_PARTY_AUDIO.md](THIRD_PARTY_AUDIO.md).
+
+---
+
 ## Controls
 
 | Key | Action |

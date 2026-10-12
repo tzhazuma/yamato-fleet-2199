@@ -21,6 +21,7 @@ docs/research/img/
 # "no third-party assets" claim in the README cannot be broken by running it.
 assets/audio/*
 !assets/audio/README.md
+!assets/audio/uncleared/README.md
 
 # Local scratch
 .DS_Store

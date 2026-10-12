@@ -17,6 +17,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, extname } from 'node:path';
 
@@ -25,6 +26,19 @@ const ASSETS = join(ROOT, 'assets');
 const MODELS = join(ASSETS, 'models');
 
 /** Every regular file below `dir`, as paths relative to ROOT. */
+/**
+ * Enumerate the files under `dir` that the REPOSITORY actually ships.
+ *
+ * The asset policy (README "Assets", SPEC §8) is a claim about what this
+ * repository contains, not about what happens to be on a developer's disk.
+ * tools/fetch_audio.mjs deliberately downloads public-domain / CC0 recordings
+ * into assets/audio/, which is gitignored, so a filesystem walk would fail a
+ * test that the repository itself passes — and would push people toward
+ * deleting their local audio to get a green suite.
+ *
+ * So: ask git for the tracked set. Fall back to a filesystem walk only when git
+ * is unavailable, and in that case still skip gitignored paths.
+ */
 function walk(dir) {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -36,9 +50,27 @@ function walk(dir) {
   return out;
 }
 
+/** Files under `dir` that git tracks. Falls back to walk() minus ignored paths. */
+function tracked(dir) {
+  try {
+    const rel = relative(ROOT, dir) || '.';
+    const listed = execFileSync('git', ['ls-files', '--', rel], { cwd: ROOT, encoding: 'utf8' })
+      .split('\n').map((l) => l.trim()).filter(Boolean)
+      .map((l) => join(ROOT, l));
+    if (listed.length) return listed;
+  } catch { /* git unavailable — fall through */ }
+  // No git: walk, but drop anything git would ignore.
+  return walk(dir).filter((f) => {
+    try {
+      execFileSync('git', ['check-ignore', '-q', '--', relative(ROOT, f)], { cwd: ROOT });
+      return false;                       // exit 0 means "ignored"
+    } catch { return true; }
+  });
+}
+
 const manifest = JSON.parse(readFileSync(join(MODELS, 'manifest.json'), 'utf8'));
-const modelFiles = walk(MODELS).map((f) => relative(ROOT, f));
-const allAssetFiles = walk(ASSETS).map((f) => relative(ROOT, f));
+const modelFiles = tracked(MODELS).map((f) => relative(ROOT, f));
+const allAssetFiles = tracked(ASSETS).map((f) => relative(ROOT, f));
 
 /* -------------------------------------------------------------------------- */
 /* 1. nothing unreferenced under assets/models/                                */
@@ -174,7 +206,20 @@ test('provenance: OBJ group names match the manifest exactly and stay in the SPE
   //       an indexed mount group.
   const SPEC_GROUPS = new Set(['hull', 'superstructure', 'bridge', 'wave_motion_gun',
     'engine_nozzle', 'turret_main', 'turret_secondary']);
-  const EXTENSIONS = new Set(['wing', 'radiator', 'ciws', 'missile_launcher', 'anti_air', 'engine']);
+  // Groups that are NOT traversable mounts. The indexed-mount regex below is a
+  // contract for "a mount authored on its own pivot so the renderer can rotate
+  // it" — hull ports, launchers and fixed structures deliberately do NOT match
+  // it, because the pivot-contract test would then (correctly) fail them.
+  const EXTENSIONS = new Set([
+    'wing', 'radiator', 'ciws', 'missile_launcher', 'anti_air', 'engine',
+    // added for the 2199 armament rebuild (docs/research/05):
+    'third_bridge',   // ventral pod under the command tower — the silhouette signature
+    'torpedo_tube',   // 28 hull ports: 6 fore, 6 aft, 8 per side. Not traversable.
+    'catapult',       // aft aircraft catapult
+    'rocket_anchor',  // bow, both sides
+    'aux_engine',     // the two auxiliary engines
+    'depth_charge',   // Type 94 launchers
+  ]);
   const INDEXED_MOUNT = /^(turret_main|turret_secondary|ciws|missile_launcher|torpedo_tube)_\d+$/;
   for (const m of manifest.models) {
     const text = readFileSync(join(MODELS, m.obj), 'utf8');
