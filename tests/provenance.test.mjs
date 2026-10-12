@@ -221,7 +221,15 @@ test('provenance: indexed mount geometry is authored on its own pivot, not at a 
   // gun house aft and make the traverse look wrong. (Corrected after the Lead
   // caught an over-strict first version of this test.)
   const INDEXED_MOUNT = /^(turret_main|turret_secondary|ciws|missile_launcher|torpedo_tube)_\d+$/;
-  const PIVOT_BAND_M = 3;           // barbette base sits at y = 0 by contract
+  // The band must contain ONLY the barbette / base ring, because a naval turret
+  // gun house legitimately OVERHANGS its barbette forward. Earlier bands of 3 m
+  // and then 1 m reached into that overhang and produced false failures on the
+  // smaller hulls (kirishima secondary -3.54 m at 3 m, yukikaze -1.62 m at
+  // 1.5 m, gaiderol secondary -1.08 m at 1 m) even though every one of those
+  // mounts is exactly centred at the pivot plane. Measured across all 8 hulls,
+  // every indexed mount gives z-centre 0.00 and x-centre 0.00 at |y| <= 0.5,
+  // and the overhang only appears above 0.75 m. So 0.5 m is the pivot plane.
+  const PIVOT_BAND_M = 0.5;
   for (const m of manifest.models) {
     const text = readFileSync(join(MODELS, m.obj), 'utf8');
     const verts = [];
@@ -300,6 +308,9 @@ test('provenance: a 90-degree traverse about the mount origin leaves its pivot f
   // pure-logic half of that check; the live-render half (mesh.position is
   // unchanged while quaternion changes) is asserted in the browser pass.
   const INDEXED_MOUNT = /^(turret_main|turret_secondary|ciws|missile_launcher|torpedo_tube)_\d+$/;
+  // Same pivot plane as the centring test above: tight enough to contain only
+  // the base ring, so the gun house's forward overhang cannot skew it.
+  const PIVOT_BAND_M = 0.5;
   for (const m of manifest.models) {
     const text = readFileSync(join(MODELS, m.obj), 'utf8');
     const verts = [];
@@ -324,7 +335,7 @@ test('provenance: a 90-degree traverse about the mount origin leaves its pivot f
       used.set(current, set);
     }
     for (const [g, set] of used) {
-      const band = [...set].map((i) => verts[i]).filter((v) => Math.abs(v[1]) <= 3);
+      const band = [...set].map((i) => verts[i]).filter((v) => Math.abs(v[1]) <= PIVOT_BAND_M);
       if (band.length < 3) continue;
       // Rotate the band 90 deg about local Y and compare its x/z footprint.
       const rot = band.map(([x, y, z]) => [z, y, -x]);
