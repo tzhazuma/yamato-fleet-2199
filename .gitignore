@@ -15,6 +15,13 @@ __pycache__/
 # every measurement taken from them, which is what the code actually depends on.
 docs/research/img/
 
+# Local-only audio fetched by tools/fetch_audio.mjs.
+# The repo ships NO third-party audio: the score is synthesised at runtime by
+# src/core/music.js. Anything downloaded here stays on this machine, so the
+# "no third-party assets" claim in the README cannot be broken by running it.
+assets/audio/*
+!assets/audio/README.md
+
 # Local scratch
 .DS_Store
 *.log

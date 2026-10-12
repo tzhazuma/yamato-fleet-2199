@@ -234,6 +234,7 @@ export async function boot() {
     time: 0,
     dt: 0,
     state: 'boot',            // boot | playing | paused | victory | defeat
+    music: null,              // procedural score (src/core/music.js)
     fireMode: CONFIG.fireModes?.default ?? 'manual',   // 'manual' | 'auto'
     firingSolution: null,     // per-frame aim/arc/range state for the HUD
     aimWeaponId: 'shock_cannon',   // which weapon's arc the HUD draws
@@ -316,6 +317,7 @@ export async function boot() {
   const hudMod = await optionalImport('./ui/hud.js');
   const radarMod = await optionalImport('./ui/radar.js');
   const audioMod = await optionalImport('./core/audio.js');
+  const musicMod = await optionalImport('./core/music.js');
   const aiMod = await optionalImport('./ai/fleetai.js');
 
   const hudRoot = document.getElementById('hud');
@@ -344,6 +346,17 @@ export async function boot() {
     catch (err) { console.warn('[main] AudioEngine failed to construct', err); world.audio = new NullAudio(); }
   } else {
     world.audio = new NullAudio();
+  }
+
+  // Procedural score (src/core/music.js). It shares the audio engine's context
+  // and master bus, so the mute key and CONFIG.audio.master apply to music too;
+  // CONFIG.audio.music is its own level. Silent until a user gesture unlocks
+  // audio, and a no-op if the module is missing.
+  if (musicMod?.MusicEngine) {
+    try { world.music = new musicMod.MusicEngine().attach(world.audio); }
+    catch (err) { console.warn('[main] MusicEngine failed to construct', err); world.music = new (musicMod.NullMusic || NullAudio)(); }
+  } else {
+    world.music = new NullAudio();
   }
 
   const input = new Input(window);
@@ -465,6 +478,7 @@ export async function boot() {
       world.hud?.update?.(dt, world);
       world.radar?.update?.(dt, world);
       world.audio?.update?.(dt, world);
+      world.music?.update?.(dt, world);
     } catch (err) { console.warn('[main] UI update threw', err); }
 
     sm.render();

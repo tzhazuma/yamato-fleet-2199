@@ -74,7 +74,7 @@ export const CONFIG = {
     trailLength: 26,
   },
 
-  audio: { master: 0.7, music: 0.0, sfx: 0.85 },
+  audio: { master: 0.7, music: 0.38, sfx: 0.85 },
 
   // ---------------------------------------------------------------------------
   // HUD — every value src/ui/** reads, so nothing is hardcoded in the UI layer.
