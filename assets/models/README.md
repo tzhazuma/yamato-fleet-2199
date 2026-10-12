@@ -49,7 +49,7 @@ X extent == `beamM`, the 12 000-triangle budget and the hardpoint rules.
 | id | name | JA | faction | class | lengthM | beamM | triangles | groups | hardpoints |
 |---|---|---|---|---|---|---|---|---|---|
 | `yamato` | Yamato (BBY-01) | ヤマト | uncf | Yamato-class | 333 | 48 | 11668 | 24 | 58 |
-| `andromeda` | Andromeda (AAA-01) | アンドロメダ | uncf | Andromeda-class | 444 | 62 | 11988 | 21 | 21 |
+| `andromeda` | Andromeda (AAA-01) | アンドロメダ | uncf | Andromeda-class | 444 | 62 | 9800 | 20 | 32 |
 | `kirishima` | Kirishima (CCV-05) | 霧島 | uncf | Kongo-class (refit) | 205 | 34 | 8872 | 20 | 18 |
 | `yukikaze` | Yukikaze (DD-117) | 雪風 | uncf | Isokaze-class | 80 | 38 | 4628 | 12 | 11 |
 | `garmillas_dessler` | Desler flagship | デスラー旗艦 | garmillas | Desler flagship | 638 | 245 | 9334 | 21 | 20 |

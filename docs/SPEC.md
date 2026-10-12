@@ -115,6 +115,16 @@ Hardpoint `pos`/`dir` are in **ship local space** (metres), `dir` normalised.
 3. Use `g <groupname>` for the part groups listed in `groups` above (subset OK).
    Group names are a **stable API** — the renderer recolours/animates by group.
 
+   **A group family is a weapon SLOT, not a calibre (binding).** `turret_main`
+   means "this hull's primary battery" — 48 cm on Yamato, 40.6 cm on Andromeda.
+   `turret_secondary` means "this hull's secondary battery", and on a hull whose
+   canon fit has no gun of that class, the slot is filled by whatever her
+   mid-calibre armament actually is (Andromeda's quad anti-ship grenade
+   projectors, for instance). Do **not** invent armament a ship never carried in
+   order to satisfy a family name, and do not drop the family: the renderer reads
+   `CONFIG.weapons.<id>.mountPrefix` to find where a weapon fires from, so a
+   missing family is a silent gameplay hole disguised as fidelity.
+
    **Indexed turret groups (added for turret traverse).** A weapon mount that the
    renderer must be able to rotate on its own gets an INDEXED group name:
    `turret_main_1..N`, `turret_secondary_1..N`, `ciws_1..N`. The index must match

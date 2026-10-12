@@ -881,7 +881,7 @@
       "mtl": "andromeda.mtl",
       "lengthM": 444,
       "beamM": 62,
-      "triangles": 11988,
+      "triangles": 9800,
       "groups": [
         "hull",
         "superstructure",
@@ -890,27 +890,26 @@
         "engine_nozzle",
         "wing",
         "radiator",
+        "anti_air",
+        "torpedo_tube",
+        "missile_launcher",
         "ciws_1",
         "ciws_2",
         "ciws_3",
         "ciws_4",
-        "ciws_5",
-        "ciws_6",
         "turret_main_1",
         "turret_main_2",
         "turret_main_3",
         "turret_main_4",
         "turret_secondary_1",
-        "turret_secondary_2",
-        "turret_secondary_3",
-        "turret_secondary_4"
+        "turret_secondary_2"
       ],
       "hardpoints": [
         {
           "name": "wave_motion_gun",
           "kind": "wmgun",
           "pos": [
-            -13.0,
+            -18.5,
             1.4,
             -199.8
           ],
@@ -924,7 +923,7 @@
           "name": "wave_motion_gun_2",
           "kind": "wmgun",
           "pos": [
-            13.0,
+            18.5,
             1.4,
             -199.8
           ],
@@ -953,8 +952,8 @@
           "kind": "turret",
           "pos": [
             0.0,
-            23.738,
-            -99.9
+            24.475,
+            -93.24
           ],
           "dir": [
             0.0,
@@ -967,8 +966,8 @@
           "kind": "turret",
           "pos": [
             0.0,
-            19.343,
-            97.68
+            13.2,
+            53.28
           ],
           "dir": [
             0.0,
@@ -981,8 +980,8 @@
           "kind": "turret",
           "pos": [
             0.0,
-            13.817,
-            159.84
+            20.067,
+            133.2
           ],
           "dir": [
             0.0,
@@ -991,59 +990,73 @@
           ]
         },
         {
+          "name": "anti_air_1",
+          "kind": "anti_air",
+          "pos": [
+            18.187,
+            27.52,
+            -50.22
+          ],
+          "dir": [
+            0.866025,
+            0.0,
+            -0.5
+          ]
+        },
+        {
+          "name": "anti_air_2",
+          "kind": "anti_air",
+          "pos": [
+            -18.187,
+            27.52,
+            -50.22
+          ],
+          "dir": [
+            -0.866025,
+            0.0,
+            -0.5
+          ]
+        },
+        {
+          "name": "anti_air_3",
+          "kind": "anti_air",
+          "pos": [
+            -0.0,
+            27.52,
+            -72.72
+          ],
+          "dir": [
+            -0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
           "name": "turret_secondary_1",
           "kind": "turret",
           "pos": [
-            20.42,
-            13.6,
-            -44.4
+            0.0,
+            19.2,
+            -8.0
           ],
           "dir": [
             0.0,
             0.0,
-            -1.0
+            1.0
           ]
         },
         {
           "name": "turret_secondary_2",
           "kind": "turret",
           "pos": [
-            -20.42,
-            13.6,
-            -44.4
+            0.0,
+            13.529,
+            93.24
           ],
           "dir": [
             0.0,
             0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_3",
-          "kind": "turret",
-          "pos": [
-            20.81,
-            13.486,
-            79.92
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_4",
-          "kind": "turret",
-          "pos": [
-            -20.81,
-            13.486,
-            79.92
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
+            1.0
           ]
         },
         {
@@ -1078,9 +1091,9 @@
           "name": "ciws_3",
           "kind": "anti_air",
           "pos": [
-            24.517,
-            13.3,
-            8.88
+            21.413,
+            13.583,
+            124.32
           ],
           "dir": [
             0.0,
@@ -1092,9 +1105,9 @@
           "name": "ciws_4",
           "kind": "anti_air",
           "pos": [
-            -24.517,
-            13.3,
-            8.88
+            -21.413,
+            13.583,
+            124.32
           ],
           "dir": [
             0.0,
@@ -1103,12 +1116,124 @@
           ]
         },
         {
-          "name": "ciws_5",
-          "kind": "anti_air",
+          "name": "torpedo_tube_fore_1",
+          "kind": "torpedo",
           "pos": [
-            20.01,
-            13.75,
-            142.08
+            16.891,
+            1.0,
+            -175.108
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_1_s",
+          "kind": "torpedo",
+          "pos": [
+            -16.891,
+            1.0,
+            -175.108
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_2",
+          "kind": "torpedo",
+          "pos": [
+            18.74,
+            1.0,
+            -153.889
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_fore_2_s",
+          "kind": "torpedo",
+          "pos": [
+            -18.74,
+            1.0,
+            -153.889
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            -0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_1",
+          "kind": "torpedo",
+          "pos": [
+            23.471,
+            1.0,
+            163.079
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_1_s",
+          "kind": "torpedo",
+          "pos": [
+            -23.471,
+            1.0,
+            163.079
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_2",
+          "kind": "torpedo",
+          "pos": [
+            20.21,
+            1.0,
+            186.178
+          ],
+          "dir": [
+            0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "torpedo_tube_aft_2_s",
+          "kind": "torpedo",
+          "pos": [
+            -20.21,
+            1.0,
+            186.178
+          ],
+          "dir": [
+            -0.214862,
+            0.0,
+            0.976644
+          ]
+        },
+        {
+          "name": "missile_launcher_1",
+          "kind": "missile",
+          "pos": [
+            23.703,
+            19.88,
+            -34.08
           ],
           "dir": [
             0.0,
@@ -1117,12 +1242,40 @@
           ]
         },
         {
-          "name": "ciws_6",
-          "kind": "anti_air",
+          "name": "missile_launcher_2",
+          "kind": "missile",
           "pos": [
-            -20.01,
-            13.75,
-            142.08
+            -23.703,
+            19.88,
+            -34.08
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "missile_launcher_3",
+          "kind": "missile",
+          "pos": [
+            24.091,
+            19.8,
+            16.98
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "missile_launcher_4",
+          "kind": "missile",
+          "pos": [
+            -24.091,
+            19.8,
+            16.98
           ],
           "dir": [
             0.0,

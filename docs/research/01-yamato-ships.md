@@ -187,6 +187,14 @@ from the actual generated geometry, but this is the right neighbourhood and orde
 
 ### 1.2 `andromeda` — アンドロメダ / Andromeda (AAA-1)
 
+> **Station conflict (recorded 2026-10, during the armament rebuild).** The
+> published stations for Andromeda's citadel (0.32) and her forward main turret B
+> (0.30) cannot both hold: her citadel base is 49 m wide by 34 m long, and at
+> 0.32 its forward top corner runs into turret B's gun house. The model resolves
+> this by moving the **citadel aft to 0.37** and **B to 0.29**, on the rule that
+> when two features compete for the same volume the more visible one keeps its
+> station. Do not "fix" this back without re-checking the volumes.
+
 | Field | Value |
 |---|---|
 | Official name | 前衛武装宇宙艦AAA-1 アンドロメダ [OFFICIAL][^andromeda] |

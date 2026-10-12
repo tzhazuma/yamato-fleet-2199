@@ -2259,8 +2259,13 @@ def aux_engine_bell(radius, length, center, group="aux_engine", segments=10,
                       segments=segments, radius2=radius, mat=bell_mat, group=group,
                       caps=False, smooth=True)]
     if glow:
+        # the glow disc sits INSIDE the mouth, not on it: a disc centred on the
+        # mouth plane pokes half its thickness past z_mouth, and when the caller
+        # puts the mouth on the stern plane (lengthM / 2) that alone breaks the
+        # Z extent - SPEC 5 rule 7 pins it exactly
         parts.append(disc(radius * 0.62, 1.2, axis="z",
-                          center=(center[0], center[1], center[2] + length * 0.5),
+                          center=(center[0], center[1],
+                                  center[2] + length * 0.5 - 0.8),
                           segments=segments, mat="engine_glow", group=group))
     return merge_parts(parts)
 
@@ -2941,15 +2946,20 @@ def build_andromeda(s):
     # citadel, evenly spaced at 120 degrees (research 01 section 1.2 calls them
     # out as "a great detail").  They ship in the merged anti_air battery: they
     # are tower-defence guns, which is exactly what that group is for.
+    #  They sit ON the citadel's first roof, on an elliptical ring (21 m across,
+    #  15 m fore-and-aft) - a circular ring big enough to clear the 40 x 34 m
+    #  base would put two of the three off the roof entirely, and at deck level
+    #  all three are inside the base or the deckhouse (checked, not guessed).
+    cit_roof = base + 12.0
     for k in range(3):
         ang = math.pi * 2.0 * k / 3.0 + math.pi / 6.0
-        ex, ez = 19.0 * math.cos(ang), bz + 19.0 * math.sin(ang)
-        s.add(box(5.0, 2.0, 5.6, center=(ex, base + 1.0, ez), mat="hull_grey",
+        ex, ez = 21.0 * math.cos(ang), bz + 15.0 * math.sin(ang)
+        s.add(box(5.0, 2.0, 5.6, center=(ex, cit_roof + 1.0, ez), mat="hull_grey",
                   group="superstructure"))
         parts = pulse_laser_mount("tower_gun", group="anti_air", scale=1.25)
-        xf_translate(parts, (ex, base + 2.0, ez))
+        xf_translate(parts, (ex, cit_roof + 2.0, ez))
         s.add(parts)
-        s.hp("anti_air_%d" % (k + 1), "anti_air", (ex, base + 2.0, ez),
+        s.hp("anti_air_%d" % (k + 1), "anti_air", (ex, cit_roof + 2.0, ez),
              (math.cos(ang) * 0.5, 0.0, math.sin(ang) * 0.5 - 0.5))
 
     # ---- six-barrel lateral beam projectors ------------------------------
@@ -3076,9 +3086,21 @@ def build_andromeda(s):
 def build_kirishima(s):
     """Kongo-class space battleship (Kirishima) - the compact one.
 
-    A protruding fixed bow cannon (not a hole in the bow), a squat aft-shifted
-    bridge, superfiring forward turrets, four triple mounts, missile-cell blocks
-    and three clustered bells.
+    Rebuilt against docs/research/01 section 1.3 (official 2202 Kongo-Kai
+    listing).  Her identity is the **protruding fixed bow cannon** - a barrel
+    shroud standing ~12 m ahead of the hull's stem, where Yamato has a hole in
+    hers - plus a squat aft-shifted bridge at 0.35 and three clustered bells.
+
+    Canon fit: 46 cm fixed bow gun x1, four triple 36 cm turrets (A/B forward
+    superfiring, C/D aft with **D superfiring over C**), 8 torpedo tubes as two
+    rows of ports on the bow flanks, 16 missile tubes as two 8-cell blocks on
+    the flanks at 0.45, and three nozzles.
+
+    She carries NO secondary battery: the Kongo-Kai listing has none, so rather
+    than inventing 20 cm guns the LAYOUT entry declares ``secondary=0`` and
+    tools/validate_models.py exempts her from the required-mix rule.  Same for
+    the AA battery - canon lists none, so the only small mounts are the two
+    point-defence channels CONFIG gives her (pdMounts = 2).
     """
     L, B = s.L, s.B
     S = lambda t: (t - 0.5) * L                       # noqa: E731
@@ -3103,19 +3125,31 @@ def build_kirishima(s):
     s.rake = make_rake(L, -L / 2.0, L / 2.0, 13.6, -9.4, bow_r=16.0, bow_p=1.6,
                        bow_fade=0.22, stern_r=6.0, stern_p=1.8, stern_fade=0.18)
 
-    # ---- protruding fixed bow cannon -------------------------------------
+    def raked(p):
+        """Author a hull-fitting hardpoint where the rake will actually put it."""
+        return (p[0], p[1], p[2] + s.rake(p[1], p[2]))
+
+    # ---- protruding fixed bow cannon (46 cm positron shock gun) ----------
+    #  The barrel tip IS the bow plane: SPEC 5 rule 7 pins the Z extent to
+    #  lengthM, so the shroud's muzzle sits at exactly -L/2 and the hull's stem
+    #  is recessed 12 m behind it.  That recess is what makes this read as a
+    #  Kongo rather than a small Yamato.
     s.add(frustum_box(16.0, 16.0, 20.0, center=(0.0, 0.6, S(0.075)),
                       scale_top=(0.7, 0.8), top_offset=(0.0, 3.0),
                       mat="hull_grey", group="hull"))
-    s.add(cylinder(4.6, 30.0, axis="z", center=(0.0, 1.0, -L / 2.0 + 15.0),
-                   segments=18, radius2=4.0, mat="gun_metal",
+    s.add(cylinder(3.6, 26.0, axis="z", center=(0.0, 1.0, -L / 2.0 + 13.0),
+                   segments=16, radius2=3.2, mat="gun_metal",
                    group="wave_motion_gun", smooth=True))
-    s.add(ring(4.0, 6.4, 3.0, axis="z", center=(0.0, 1.0, -L / 2.0 + 1.6),
-               segments=18, mat="gun_metal", group="wave_motion_gun"))
+    s.add(ring(3.2, 4.6, 2.6, axis="z", center=(0.0, 1.0, -L / 2.0 + 1.3),
+               segments=16, mat="gun_metal", group="wave_motion_gun"))
+    s.add(ring(2.2, 3.4, 1.6, axis="z", center=(0.0, 1.0, -L / 2.0 + 6.0),
+               segments=12, mat="deck_dark", group="wave_motion_gun"))
     s.hp("wave_motion_gun", "wmgun", (0.0, 1.0, -L / 2.0 + 8.0), (0.0, 0.0, -1.0))
 
-    # ---- superfiring forward pair + two aft ------------------------------
-    for i, (st, raise_) in enumerate(((0.180, 0.0), (0.300, 6.0))):
+    # ---- four triple 36 cm: A/B forward, C/D aft, D superfiring over C ----
+    #  Canon stations A 0.16 / B 0.32 / C 0.66 / D 0.82.  The old model had the
+    #  aft pair the wrong way round (C raised, D on the deck).
+    for i, (st, raise_) in enumerate(((0.160, 0.0), (0.320, 6.0))):
         zz = S(st)
         d = dy(zz) + raise_
         if raise_:
@@ -3123,8 +3157,9 @@ def build_kirishima(s):
                               scale_top=(0.9, 0.93), mat="hull_grey",
                               group="superstructure"))
         mount_turret(s, "turret_main_%d" % (i + 1), "turret_main", d, zz,
-                     6.4, 3.0, (17.0, 6.6, 18.0), 3, 1.4, 15.0, elev=0.06)
-    for i, (st, raise_) in enumerate(((0.680, 4.0), (0.830, 0.0))):
+                     6.4, 3.0, (17.0, 6.6, 18.0), 3, 1.4, 15.0, elev=0.06,
+                     muzzle_ring=False)
+    for i, (st, raise_) in enumerate(((0.660, 0.0), (0.820, 4.5))):
         zz = S(st)
         d = dy(zz) + raise_
         if raise_:
@@ -3132,7 +3167,39 @@ def build_kirishima(s):
                               scale_top=(0.9, 0.93), mat="hull_grey",
                               group="superstructure"))
         mount_turret(s, "turret_main_%d" % (i + 3), "turret_main", d, zz,
-                     6.4, 3.0, (17.0, 6.6, 18.0), 3, 1.4, 15.0, aft=True, elev=0.06)
+                     6.4, 3.0, (17.0, 6.6, 18.0), 3, 1.4, 15.0, aft=True, elev=0.06,
+                     muzzle_ring=False)
+
+    # ---- torpedo battery: 8 ports in two rows on the bow flanks ----------
+    #  魚雷発射管 x8, stations 0.08-0.18 (research 01 section 1.3).  Hull
+    #  openings, so they take the merged group and carry direction in the
+    #  hardpoint - exactly as on Yamato.
+    for i, zz in enumerate((S(0.095), S(0.135))):
+        for j, (sgn, yy) in enumerate(((1.0, 3.4), (1.0, -1.2),
+                                       (-1.0, 3.4), (-1.0, -1.2))):
+            face_x = hx_at(secs, zz, yy) * BELT_SCALE
+            cx = sgn * (face_x - 0.7)
+            s.add(hull_port(2.0, (cx, yy, zz), axis="x", depth=1.4,
+                            group="torpedo_tube", segments=5))
+            s.hp("torpedo_tube_%s%d_%s" % ("p" if sgn > 0 else "s", i + 1,
+                                           "u" if yy > 0 else "l"), "torpedo",
+                 raked((cx, yy, zz)), (sgn * 0.28, 0.0, -1.0))
+
+    # ---- 16 missile tubes: two 8-cell blocks on the flanks at 0.45 -------
+    #  "two blocks of 8 rectangular cell hatches, offset +/-0.40 x beam, angled
+    #  slightly upward" (research 01 section 1.3) - cheap triangles, very
+    #  readable, and each block is ONE mesh so the count is checkable.
+    for i, sgn in enumerate((1.0, -1.0)):
+        zz = S(0.450)
+        x = 0.40 * B
+        block = missile_cell_box(2, 4, 1.05, 2.4,
+                                 (sgn * x, dy(zz) + 4.6, zz), face="-z",
+                                 scale=(1.0, 1.0))
+        for p in as_list(block):
+            p.rotate_x(0.12 * sgn * sgn)     # angled slightly upward
+        s.add(block)
+        s.hp("missile_launcher_%d" % (i + 1), "missile",
+             (sgn * x, dy(zz) + 4.6, zz - 3.0), (0.0, 0.12, -1.0))
 
     # ---- squat bridge at station 0.35 + missile blocks -------------------
     bz = S(0.350)
@@ -3151,31 +3218,19 @@ def build_kirishima(s):
                           max(3, int(tl / 7.0)), win=(2.6, 1.8), group="bridge"))
         y += th
     s.add_at(mast(10.0, 0.9, segments=6, arms=2, dish_r=3.4), (0.0, y, bz))
-    for sgn in (1.0, -1.0):
-        zz = S(0.450)
-        x = hx_at(secs, zz, dy(zz) - 1.0) * 0.88
-        s.add(box(3.4, 5.0, 18.0, center=(sgn * x, dy(zz) - 2.0, zz), mat="hull_grey",
-                  group="superstructure"))
-        for k in range(4):
-            s.add(box(1.3, 1.8, 2.6, center=(sgn * (x + 1.1), dy(zz) - 1.2,
-                                             zz - 6.0 + k * 4.0),
-                      mat="deck_dark", group="superstructure"))
-    for i, st in enumerate((0.420, 0.640)):
-        zz = S(st)
-        x = hx_at(secs, zz, dy(zz) - 1.0) * 0.80
-        for sgn in (1.0, -1.0):
-            s.add(box(8.0, 2.4, 11.0, center=(sgn * x, dy(zz) - 1.2, zz),
-                      mat="hull_grey", group="superstructure"))
-            mount_turret(s, "turret_secondary_%d" % (2 * i + (1 if sgn > 0 else 2)),
-                         "turret_secondary", dy(zz) + 0.2, zz, 3.2, 2.0,
-                         (7.0, 3.4, 8.0), 2, 0.75, 9.0, x=sgn * x, elev=0.10)
-    for i, (st, sgn) in enumerate(((0.240, 1.0), (0.240, -1.0), (0.560, 1.0),
-                                   (0.560, -1.0), (0.880, 1.0), (0.880, -1.0))):
+    # ---- AA: two point-defence mounts, and nothing else ------------------
+    #  The Kongo-Kai listing gives her no AA battery at all, so the only small
+    #  mounts are the two point-defence channels CONFIG gives her
+    #  (pdMounts = 2).  Padding her up to a battleship's battery would be
+    #  inventing armament; the four triple 36 cm turrets, the bow gun, the
+    #  torpedo rows and the two 8-cell missile blocks ARE her armament.
+    for i, (st, sgn) in enumerate(((0.240, 1.0), (0.240, -1.0))):
         zz = S(st)
         x = hx_at(secs, zz, dy(zz) - 0.5) * 0.88
-        s.add(box(5.0, 1.6, 6.0, center=(sgn * x, dy(zz) - 0.8, zz), mat="hull_grey",
+        s.add(box(5.6, 1.8, 6.6, center=(sgn * x, dy(zz) - 0.9, zz), mat="hull_grey",
                   group="superstructure"))
-        mount_aa(s, "ciws_%d" % (i + 1), dy(zz) + 0.1, zz, sgn * x, scale=0.85)
+        mount_pulse_laser(s, "ciws_%d" % (i + 1), dy(zz) + 0.1, zz, sgn * x,
+                          form="twin_127")
     for sgn in (1.0, -1.0):
         s.add(box(0.8, 10.0, 30.0, center=(sgn * hx_at(secs, S(0.86), 2.0) * 0.94,
                                            2.0, S(0.86)), mat="deck_dark",
