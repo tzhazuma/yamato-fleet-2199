@@ -162,3 +162,51 @@ which fits under the 12 000 ceiling comfortably.
   rather than presented as canon.
 - We still have no licensed orthographic drawing. If one is obtained, this file
   should be revised and the model re-derived from it.
+
+---
+
+## 6. Canon hardware vs issued weapons — the decisions
+
+The models now carry canon armament hardware on all eight hulls. `CONFIG` decides
+which of it is *issued as a weapon*, and the two are deliberately not the same
+thing. The rule applied:
+
+> **Model the hardware for fidelity. Issue the weapon for balance. Where the two
+> disagree, record the disagreement here rather than quietly deleting hardware or
+> quietly adding a weapon.**
+
+`tools/validate_models.py` warns on every disagreement, so none of these can be
+forgotten.
+
+### Issued — CONFIG changed to match the model
+
+| Hull | Change | Why |
+|---|---|---|
+| Yamato | `missile` added, 1 mount | Twelve canon launchers are modelled (10 ventral tubes + eight-barrel box + funnel). The flagship should have her full armament. One mount, not twelve: the missile is a fire-control channel, and 36 DPS is +10% on a 360 DPS ship. |
+| Dessler | `garmillas_beam` 4 → 6 | Canon gives her 4–6 dorsal domed mounts; the model emits six at the canon stations. Setting CONFIG to the model beats deleting two mounts to match a number. |
+| Kelkapia | `garmillas_beam` 2 → 3 | Canon gives three dorsal domed mounts at 0.25/0.50/0.75. Same shape of fix as Kirishima 2 → 4. |
+| Kirishima | `uncf_beam` 2 → 4 | Four triple 36 cm turrets were modelled; only two were firing. |
+| Yukikaze | `uncf_beam` 1 → 2 | Two triple 12.7 cm turrets were modelled; only one was firing. |
+
+### Modelled but NOT issued — deliberate, and why
+
+| Hull | Hardware | Decision |
+|---|---|---|
+| Andromeda, Kirishima, Yukikaze | 4 / 16 / 8 missile tubes | **No missile weapon.** The missile is 36 DPS per mount. On Yukikaze (1000 EHP, 24 DPS) that is a **+150%** increase and would make a destroyer hit as hard as a battlecruiser. The hardpoints exist, so issuing the weapon later is a config change, not a remodelling job. |
+| Yukikaze, Gaiderol, Bolar | 3 / 16 / 12 torpedo tubes | **No torpedo weapon.** The torpedo is 260 damage × 4 per mount, i.e. **86.7 DPS** — battleship-grade alpha. Issuing it to a destroyer or a carrier would distort every engagement they appear in. |
+| Yukikaze | 2 fixed bow 12.7 cm | Merged `superstructure` geometry, no hardpoints. They do not traverse, so they must not be indexed; they are also not a `secondary_battery` (29.3 DPS/mount is battleship-grade ordnance). |
+| Andromeda | 2 quad grenade projectors | Merged `missile_launcher` bucket, with a hardpoint each, so adding a weapon is all it takes to make them live. |
+
+**`turret_secondary` now exists on the Yamato alone.** That is correct: she is the
+only hull in the fleet whose CONFIG issues a `secondary_battery`. Every other hull
+either has no mid-calibre armament or has it in a merged, non-traversable group.
+
+### The rule this replaced
+
+An earlier instruction of mine said `turret_secondary` was a weapon slot every
+hull had to fill. That was wrong — I had assumed every hull *has* a secondary
+battery without checking. Three of them do not, so the mounts emitted to satisfy
+the rule were inert. The required mount families are now **derived from CONFIG**
+(`weapons` → `mountPrefix` → `mounts`), not asserted as a blanket rule, and a
+CONFIG-required family that is missing or short **fails** while hardware CONFIG
+never reads only **warns**.

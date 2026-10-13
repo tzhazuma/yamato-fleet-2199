@@ -1784,9 +1784,60 @@ consumer must take from the manifest rather than hardcoding.
 | `torpedo` | hull torpedo tubes (`torpedo_tube_*`), openings in the plating |
 | `missile` | missile launchers (`missile_launcher_*`), ventral tubes and box/funnel cells |
 
-Every ship carries a bow `wave_motion_gun` emitter, centreline `turret_main`
-mounts, at least two `turret_secondary` and two `anti_air` mounts, and stern
-`engine_*` bells.
+The required mix is **derived from `src/core/config.js`, not asserted**: one
+`turret_main` hardpoint per mount a hull's primary beam weapon declares, a
+`torpedo_tube` or `missile_launcher` family only if she carries that weapon, one
+`ciws_*` per point-defence channel, and a bow `wave_motion_gun` emitter.  Only
+Yamato carries a `secondary_battery`, so only Yamato has `turret_secondary_*`.
+`anti_air` carries no requirement at all - nothing under `src/` reads that
+family; point defence is an aura driven by `CONFIG.ships[*].pdMounts`.
+
+A group family is a **weapon slot**, not a calibre, and an INDEXED name is a
+promise: the geometry is authored on its own traverse pivot and a hardpoint of
+the same name exists to place it.  Anything that does not turn - a torpedo port,
+a fixed bow gun, a ventral beam mount that nothing fires from - ships as merged
+geometry under `superstructure` or a merged weapon bucket instead.
+
+### Per-ship armament layout (task-9 rebuild)
+
+All eight hulls are rebuilt against `docs/research/01-yamato-ships.md` (one
+section per ship) and `docs/research/05-yamato-armament-layout.md` for the
+grammar; `tools/validate_models.py` asserts each hull's canon counts from a
+`LAYOUT` entry whose source is named in the table's header.
+
+* **yamato** - 3 triple 48 cm mains, 2 centreline 20 cm secondaries, 40 pulse
+  lasers (4 `ciws_*` + 38 merged), 28 torpedo ports (6 fore / 6 aft / 16
+  broadside), 12 missile launchers (10 ventral), third bridge, catapult, 2
+  rocket anchors, 2 depth-charge racks, 2 auxiliary engines.
+* **andromeda** - twin wave-motion-gun muzzles in the bow, 4 triple 40.6 cm
+  (A/B forward, C/D aft with D superfiring over C), 3 citadel shock-field guns,
+  4 `ciws_*`, 8 torpedo ports, 6 merged launcher meshes (4 graviton spread
+  launchers + 2 quad grenade projectors), the two six-barrel lateral beam
+  projectors on the flanks, 1 + 4 Kelvin nozzles.
+* **kirishima** - the protruding fixed 46 cm bow cannon (its muzzle IS the bow
+  plane; the hull's stem is recessed 12 m behind it), 4 triple 36 cm all
+  `turret_main_1..4`, 8 torpedo ports in two rows on the bow flanks, two 8-cell
+  missile blocks, 3 clustered bells, squat bridge at 0.35.
+* **yukikaze** - a destroyer's fit: 2 triple 12.7 cm (one dorsal, one VENTRAL,
+  mirrored in Y with its pivot on the keel), 2 fixed bow anti-ship guns as merged
+  geometry, 3 torpedo ports, one 8-cell missile block, 1 main bell + 3 verniers,
+  the 艦首装甲翼 bow plate with six fins, faired canopy, drop tanks.
+* **garmillas_dessler** - Desler cannon in a raked prow, 6 dorsal domed beam
+  mounts, 2 ventral domed mounts and 4 `ciws_*` in the merged battery, one flush
+  missile block, the separable 3-tier core ship with its docking seam, the dorsal
+  launch aperture, 3 large + 2 small bells.
+* **garmillas_kelkapia** - slim teardrop, twin bow emitters, 3 dorsal domed beam
+  mounts, 2 ventral domed mounts, 2 `ciws_*` + 4 merged mounts as the bridge
+  blister's anti-air clusters, dorsal fin ridge, 2 flared bells + 1 vernier.
+* **garmillas_gaiderol** - vertical blade hull under a tall citadel, 4 dorsal
+  domed beam mounts, 3 ventral domed mounts, the **bridge CIWS ring of 10 domed
+  mounts** (4 `ciws_*` + 6 merged), 16 recessed torpedo ports in two rows per
+  flank, one flush missile block, 4 bells in 2x2.
+* **bolar_carrier** - the wide horizontal Bolar cannon slab, 3 retractable quad
+  positron guns, 20 retractable dual-purpose mounts (10 per side in two rows)
+  plus 2 at the bridge base as the merged battery, 12 space torpedo tubes (6 per
+  side), 3 `ciws_*`, one flush missile block, the full-length red-glowing flight
+  deck with its stern landing aperture, island at the very stern, 4 flared bells.
 
 ### Yamato armament layout (task-9 rebuild)
 
@@ -2025,21 +2076,41 @@ def mount_garm_turret(s, name, deck_y, z, radius, height, barrel_r, barrel_len,
     Garmillas close-in mount (``anti_air``): the faction's AA is a small domed
     mount, not a UNCF box, so the two share one form exactly as the pulse-laser
     battery shares AA_FORMS on the UNCF side.
+
+    ``group`` is the FAMILY.  When it is a merged family (``anti_air``) the
+    geometry is emitted under that merged name, BAKED at its position, and
+    ``name`` is only the hardpoint's; when it is an indexed family the geometry
+    takes ``name`` and stays on its own pivot, because an indexed group is a
+    promise that the renderer can place and traverse it.  (Baking the merged case
+    matters: leaving those meshes at the origin stacks every merged mount of the
+    battery on top of every other, which is invisible in the renderer - the
+    hardpoints place nothing - but makes the mesh count meaningless.)
     """
+    merged = not (_TURRET_RE.match(group) or group in TURRET_GROUPS)
+    part_group = group if merged else name
     parts = [ring(radius * 0.80, radius * 1.05, 1.2, axis="y",
-                  center=(0.0, 0.6, 0.0), segments=14, mat=body_mat, group=name),
+                  center=(0.0, 0.6, 0.0), segments=14, mat=body_mat,
+                  group=part_group),
              dome(radius * 0.94, height, center=(0.0, 1.2, 0.0), segments=16, rings=3,
-                  mat=dome_mat, group=name)]
+                  mat=dome_mat, group=part_group)]
     for ox in (-radius * 0.36, radius * 0.36):
+        first = len(parts)
         parts.extend(barrel(barrel_len, barrel_r, segments=8, mat=body_mat,
-                            group=name))
-        xf_translate(parts[-2:], (ox, height * 0.62, -radius * 0.5))
+                            group=part_group))
+        # translate EVERY part of this barrel: barrel() returns three primitives
+        # (tube, breech sleeve, muzzle step), so parts[-2:] left the tube behind
+        # at the origin - it then hid inside the dome and the mount lost its
+        # barrels entirely, which is why the domed mounts read as bare domes
+        xf_translate(parts[first:], (ox, height * 0.62, -radius * 0.5))
     if ventral:
         xf_mirror_y(parts)
     if aft:
         for part in as_list(parts):
             part.rotate_y(math.pi)
-    s.add(merge_parts(parts))
+    mount = merge_parts(parts)
+    if merged:
+        mount.translate((x, -deck_y if ventral else deck_y, z))
+    s.add(mount)
     s.hp(name, kind, (x, -deck_y if ventral else deck_y, z),
          (0.0, 0.0, 1.0 if aft else -1.0))
     return parts
@@ -2130,9 +2201,21 @@ def pulse_laser_mount(form="twin_75", group="anti_air", scale=1.0,
 
 def mount_pulse_laser(s, name, deck_y, z, x, form="twin_75", group=None,
                       scale=1.0, dir_y=0.0):
-    """Indexed pulse-laser mount: geometry authored on its pivot + its hardpoint."""
+    """Pulse-laser mount: geometry authored on its pivot + its hardpoint.
+
+    Indexed families keep the geometry on its pivot (the renderer places and
+    traverses it); a MERGED family is baked at its position here, because
+    nothing places a merged mount and leaving it at the origin would stack the
+    whole battery on one spot.
+    """
     group = group or name
+    # `group` may be an indexed NAME (ciws_1) or a FAMILY (anti_air): only a
+    # family that is not in TURRET_GROUPS is a merged group
+    merged = not (_TURRET_RE.match(group) or group in TURRET_GROUPS)
     parts = pulse_laser_mount(form, group=group, scale=scale)
+    if merged:
+        for part in as_list(parts):
+            part.translate((x, deck_y, z))
     s.add(parts)
     s.hp(name, "anti_air", (x, deck_y, z), (0.0, dir_y, -1.0))
     return parts
@@ -2860,9 +2943,10 @@ def build_andromeda(s):
     * the twin muzzles are at +/-18.5 m, not the research's +/-24 m, because a
       20 m muzzle at +/-24 m would put the collars 6 m outside beamM/2 and break
       SPEC 5 rule 7 (X extent == beamM);
-    * the contract requires two `turret_secondary` mounts and canon gives this
-      hull no 20 cm secondary at all, so that family carries her two quad
-      anti-ship grenade projectors (四連装対艦グレネード投射機 x2).
+    * CONFIG gives her no `secondary_battery`, so her two quad anti-ship grenade
+      projectors (四連装対艦グレネード投射機 x2) ship as merged
+      `missile_launcher` geometry rather than as an indexed turret family: an
+      indexed mount promises a traverse pivot that nothing fires from.
     """
     L, B = s.L, s.B
     S = lambda t: (t - 0.5) * L                       # noqa: E731
@@ -2993,20 +3077,27 @@ def build_andromeda(s):
                            segments=7, mat="gun_metal", group="superstructure",
                            smooth=True))
 
-    # ---- SECONDARY FAMILY: the two quad anti-ship grenade projectors ------
-    #  Canon gives this hull no 20 cm secondary, but SPEC 5's required mix wants
-    #  at least two `turret_secondary` mounts on every ship, so the family
-    #  carries her 四連装対艦グレネード投射機 x2 - the closest canon pair - on
-    #  the centreline, one on the long deckhouse forward of turret C and one
-    #  between C and D.  Documented rather than silently invented.  #1 sits at
-    #  z = -8 on the long deckhouse roof, forward of the funnels (its barrels
-    #  train aft to z = +11, and funnel 1's base starts at +18.6).
-    mount_turret(s, "turret_secondary_1", "turret_secondary", dy(S(0.45)) + 6.0,
-                 -8.0, 4.6, 3.0, (11.0, 4.6, 12.0), 4, 0.9, 10.0,
-                 aft=True, elev=0.10, muzzle_ring=False)
-    mount_turret(s, "turret_secondary_2", "turret_secondary", dy(S(0.710)) + 0.2,
-                 S(0.710), 4.6, 3.0, (11.0, 4.6, 12.0), 4, 0.9, 10.0,
-                 aft=True, elev=0.10, muzzle_ring=False)
+    # ---- 四連装対艦グレネード投射機 x2: the two quad grenade projectors ---
+    #  Canon gives this hull no 20 cm secondary and CONFIG gives her no
+    #  `secondary_battery` weapon, so these must NOT claim the indexed
+    #  `turret_secondary` family: an indexed mount promises a traverse pivot that
+    #  nothing fires from.  They ship as merged `missile_launcher` geometry - the
+    #  vocabulary's bucket for projectile launchers - alongside her four graviton
+    #  spread launchers, with a hardpoint each so that adding a missile or
+    #  secondary weapon to her CONFIG is all it takes to make them live.
+    #  #1 sits at z = -8 on the long deckhouse roof, forward of the funnels (its
+    #  barrels train aft to z = +11, and funnel 1's base starts at +18.6).
+    for i, (zz, yy, rr) in enumerate(((-8.0, dy(S(0.45)) + 6.0, 0.0),
+                                      (S(0.710), dy(S(0.710)) + 0.2, 0.0))):
+        parts = turret(4.6, 3.0, (11.0, 4.6, 12.0), 4, 0.9, 10.0,
+                       group="missile_launcher", elev=0.10, deck_ring=True,
+                       muzzle_ring=False, barbette_seg=10)
+        for part in as_list(parts):
+            part.rotate_y(math.pi)               # trained aft
+        xf_translate(parts, (rr, yy, zz))
+        s.add(parts)
+        s.hp("missile_launcher_grenade_%d" % (i + 1), "missile",
+             (rr, yy, zz), (0.0, 0.0, 1.0))
 
     # ---- AA: four traversable PD mounts + the three tower guns ------------
     #  Canon lists no pulse-laser battery for this hull, so the only AA mounts
@@ -3166,14 +3257,11 @@ def build_kirishima(s):
     #  Canon stations A 0.16 / B 0.32 / C 0.66 / D 0.82.  The old model had the
     #  aft pair the wrong way round (C raised, D on the deck).
     #
-    #  SLOT ASSIGNMENT, per the Lead's ruling: a group family is a weapon SLOT,
-    #  not a calibre.  All four mounts are identical 36 cm triples, but the
-    #  forward pair occupies the primary slot (`turret_main_1..2`) and the aft
-    #  pair the secondary slot (`turret_secondary_1..2`) - because SPEC's
-    #  required mix wants both slots filled on every hull, CONFIG fires her
-    #  beam mounts from `turret_main` (mounts.uncf_beam = 2, the forward pair),
-    #  and inventing a mid-calibre gun she never carried would be worse than
-    #  labelling her real aft battery as what it is: her second battery group.
+    #  All four are `turret_main_1..4`: CONFIG.ships.kirishima fires
+    #  mounts.uncf_beam = 4 from `turret_main`, and she has NO secondary battery
+    #  in her weapons array, so an indexed `turret_secondary` family here would
+    #  promise a traverse pivot that nothing fires from (Lead's correction to the
+    #  earlier slot ruling).
     for i, (st, raise_) in enumerate(((0.160, 0.0), (0.320, 6.0))):
         zz = S(st)
         d = dy(zz) + raise_
@@ -3191,7 +3279,7 @@ def build_kirishima(s):
             s.add(frustum_box(24.0, raise_, 24.0, center=(0.0, dy(zz) + raise_ / 2.0, zz),
                               scale_top=(0.9, 0.93), mat="hull_grey",
                               group="superstructure"))
-        mount_turret(s, "turret_secondary_%d" % (i + 1), "turret_secondary", d, zz,
+        mount_turret(s, "turret_main_%d" % (i + 3), "turret_main", d, zz,
                      6.4, 3.0, (17.0, 6.6, 18.0), 3, 1.4, 15.0, aft=True, elev=0.06,
                      muzzle_ring=False)
 
@@ -3287,10 +3375,14 @@ def build_yukikaze(s):
     the canopy.  She is deliberately NOT padded up to a battleship's battery:
     the only small mount is her single point-defence channel (pdMounts = 1).
 
-    SLOT ASSIGNMENT (Lead's ruling: a family is a weapon SLOT, not a calibre):
-    the dorsal and ventral 12.7 cm triples hold `turret_main_1..2`, the two
-    fixed bow anti-ship guns hold `turret_secondary_1..2`, and the bow emitter
-    ring holds the `wave_motion_gun` slot the contract requires.
+    FAMILIES (derived from CONFIG, not asserted): her two triple 12.7 cm turrets
+    hold `turret_main_1..2` (CONFIG fires mounts.uncf_beam = 2 from turret_main),
+    the bow emitter ring holds the `wave_motion_gun` slot the SPEC mix requires,
+    and `ciws_1` is her single point-defence channel.  She has NO
+    `secondary_battery` and no `torpedo` weapon in CONFIG, so her two fixed bow
+    guns and her three torpedo tubes ship as merged geometry with no hardpoints:
+    an indexed mount promises a traverse pivot, and a family CONFIG never reads
+    should not be claimed.
     """
     L, B = s.L, s.B
     S = lambda t: (t - 0.5) * L                       # noqa: E731
@@ -3367,12 +3459,17 @@ def build_yukikaze(s):
 
     # ---- two fixed forward 12.7 cm anti-ship guns on the upper bow --------
     #  12.7サンチ対艦砲 x2, "short parallel barrels on the upper surface" of the
-    #  blunt nose (research 01 section 1.4).  Fixed, so they are authored
-    #  trained fore-and-aft at traverse 0; they hold the secondary slot.
-    for i, ox in enumerate((-2.4, 2.4)):
-        mount_turret(s, "turret_secondary_%d" % (i + 1), "turret_secondary",
-                     5.0, -L / 2.0 + 6.0, 1.0, 1.0, (3.4, 1.6, 4.6), 1, 0.55, 6.0,
-                     x=ox, elev=0.0, muzzle_ring=False)
+    #  blunt nose (research 01 section 1.4).  They do NOT traverse, so by our own
+    #  rule they must not be indexed either: they ship as merged `superstructure`
+    #  geometry with no hardpoints, exactly like Andromeda's fixed lateral beam
+    #  projectors.  CONFIG gives her no secondary battery, so there is no family
+    #  for them to occupy (Lead's correction to the earlier slot ruling).
+    for ox in (-2.4, 2.4):
+        parts = turret(1.0, 1.0, (3.4, 1.6, 4.6), 1, 0.55, 6.0,
+                       group="superstructure", elev=0.0, deck_ring=False,
+                       muzzle_ring=False, barbette_seg=8)
+        xf_translate(parts, (ox, 5.0, -L / 2.0 + 6.0))
+        s.add(parts)
 
     # ---- one point-defence channel (pdMounts = 1) ------------------------
     mount_pulse_laser(s, "ciws_1", dy(S(0.28)), S(0.28), 8.4, form="twin_75")
@@ -3380,20 +3477,19 @@ def build_yukikaze(s):
     # ---- three torpedo tubes, as hull openings ---------------------------
     #  魚雷発射管 x3 - she carried the 試製空間魚雷 experimental torpedo.  One in
     #  the bow face and one each side of it, all flush with the plating.
-    for i, (ox, oy, direction, name) in enumerate((
-            (0.0, -1.2, (0.0, 0.0, -1.0), "torpedo_tube_bow"),
-            (6.0, -1.2, (0.35, 0.0, -1.0), "torpedo_tube_p1"),
-            (-6.0, -1.2, (-0.35, 0.0, -1.0), "torpedo_tube_s1"))):
+    #  GEOMETRY ONLY, no `torpedo_tube` hardpoints: CONFIG.ships.yukikaze has no
+    #  `torpedo` weapon, and a family CONFIG never reads should not be claimed.
+    #  The ports stay because canon gives her the tubes; if the Lead adds the
+    #  weapon, restoring the hardpoints is a three-line change.
+    for (ox, oy) in ((0.0, -1.2), (6.0, -1.2), (-6.0, -1.2)):
         if ox:
             face_x = hx_at(sections, -L / 2.0 + 12.0, oy) * BELT_SCALE
             cx = (1.0 if ox > 0 else -1.0) * (face_x - 0.6)
             s.add(hull_port(1.4, (cx, oy, -L / 2.0 + 12.0), axis="x", depth=1.2,
                             group="torpedo_tube", segments=5))
-            s.hp(name, "torpedo", (cx, oy, -L / 2.0 + 12.0), direction)
         else:
             s.add(hull_port(1.4, (0.0, oy, -L / 2.0 + 2.0), axis="z", depth=1.2,
                             group="torpedo_tube", segments=5))
-            s.hp(name, "torpedo", (0.0, oy, -L / 2.0 + 2.0), direction)
 
     # ---- eight missile tubes in one block behind the canopy ---------------
     #  ミサイル発射管 x8, "a block of cells immediately behind the bridge"
@@ -3499,28 +3595,39 @@ def build_garmillas_dessler(s):
                    radius2=24.0, mat="deck_dark", group="hull"))
     s.add(cylinder(20.0, 2.0, axis="y", center=(0.0, deck + 1.2, az), segments=16,
                    mat="hull_black", group="hull"))
-    # domed dorsal + ventral rows
-    # domed dorsal row (6 mounts, three stations either side of the core) and
-    # the ventral pair.  The ventral mounts are CENTRELINE, one per station:
-    # canon gives the two stations and no lateral offset, and four wing mounts
-    # would repeat the mistake the Yamato's old secondary battery made.
+    # domed dorsal + ventral rows.
+    # Dorsal: 6 mounts, three stations either side of the core (canon 4-6).
+    # CONFIG fires only 4 from turret_main, which the validator reports as a
+    # warning for the Lead to settle - canon allows 4, so the alternative fix is
+    # to drop the 0.70 pair.
     for i, (st, sgn) in enumerate(((0.200, 1.0), (0.200, -1.0), (0.450, 1.0),
                                    (0.450, -1.0), (0.700, 1.0), (0.700, -1.0))):
         mount_garm_turret(s, "turret_main_%d" % (i + 1), deck, S(st), 11.0, 6.0,
                           1.8, 20.0, x=sgn * 0.22 * B, body_mat="gun_metal",
                           dome_mat="hull_olive")
+    # Ventral: canon's two stations, centreline.  CONFIG gives her no
+    # secondary_battery, so they cannot be an indexed family; on Garmillas hulls
+    # the domed mount form serves beam mounts and close-in mounts alike, so they
+    # share the merged `anti_air` bucket - the only home a non-indexed gun mount
+    # has in the vocabulary.
     for i, st in enumerate((0.300, 0.600)):
-        mount_garm_turret(s, "turret_secondary_%d" % (i + 1), deck, S(st), 9.0, 5.0,
+        mount_garm_turret(s, "anti_air_%d" % (i + 1), deck, S(st), 9.0, 5.0,
                           1.5, 16.0, ventral=True, body_mat="gun_metal",
-                          dome_mat="hull_green", group="turret_secondary")
-    # Her only close-in armament: the two point-defence channels CONFIG gives her
-    # (pdMounts = 2).  Canon lists no AA battery for the Deusura II at all - her
-    # defence is her Gamiloid complement - so the old model's four CIWS boxes
-    # were invention; they are two now, in the faction's domed mount form.
-    for i, (st, sgn) in enumerate(((0.150, 1.0), (0.150, -1.0))):
+                          dome_mat="hull_green", group="anti_air",
+                          kind="anti_air")
+    # 4 point-defence channels (pdMounts = 4), in the faction's domed form.
+    for i, (st, sgn) in enumerate(((0.150, 1.0), (0.150, -1.0), (0.800, 1.0),
+                                   (0.800, -1.0))):
         mount_garm_turret(s, "ciws_%d" % (i + 1), deck, S(st), 4.6, 2.6, 0.5, 7.0,
                           x=sgn * 0.36 * B, body_mat="gun_metal",
                           dome_mat="hull_green", kind="anti_air")
+    # CONFIG carries a `missile` weapon for her (mounts.missile = 1) although the
+    # research lists no launcher, so one flush 6-cell block is modelled on the
+    # dorsal spine aft of the core ship.  Flagged to the Lead as a canon/CONFIG
+    # disagreement: either she gets a launcher, or the CONFIG weapon goes.
+    s.add(missile_cell_box(2, 3, 1.4, 3.4, (0.0, deck + 1.2, S(0.78)), face="-z"))
+    s.hp("missile_launcher_1", "missile", (0.0, deck + 1.2, S(0.78) - 4.0),
+         (0.0, 0.0, -1.0))
     fin = swept_fin(46.0, 3.0, 30.0, sweep=0.5, rise=6.0, mat="hull_green",
                     group="wing")
     xf_rotate_z(fin, 0.35)
@@ -3597,23 +3704,25 @@ def build_garmillas_kelkapia(s):
     for i, st in enumerate((0.25, 0.50, 0.75)):
         mount_garm_turret(s, "turret_main_%d" % (i + 1), deck, S(st), 8.0, 4.6,
                           1.3, 14.0, body_mat="gun_metal", dome_mat="hull_olive")
+    # Ventral domed pair: CONFIG gives her no secondary_battery, so they ship in
+    # the merged `anti_air` bucket (see the Dessler note on the domed form).
     for i, st in enumerate((0.35, 0.65)):
-        mount_garm_turret(s, "turret_secondary_%d" % (i + 1), deck, S(st), 6.4, 3.6,
+        mount_garm_turret(s, "anti_air_%d" % (i + 1), deck, S(st), 6.4, 3.6,
                           1.0, 11.0, ventral=True, body_mat="gun_metal",
-                          dome_mat="hull_green", group="turret_secondary")
+                          dome_mat="hull_green", group="anti_air",
+                          kind="anti_air")
     # small anti-air clusters around the bridge blister (research 01 section
-    # 2.2).  Four of them are the traversable point-defence channels CONFIG
-    #  gives her (pdMounts = 4) and six more ship merged in `anti_air`: canon
-    #  says "clusters" without a count, so the ring is a reconstruction.
-    for i, (st, sgn) in enumerate(((0.42, 1.0), (0.42, -1.0), (0.62, 1.0),
-                                   (0.62, -1.0))):
+    # 2.2).  Two of them are the traversable point-defence channels CONFIG gives
+    # her (pdMounts = 2) and four more ship merged in `anti_air`: canon says
+    # "clusters" without a count, so the ring is a reconstruction.
+    for i, (st, sgn) in enumerate(((0.42, 1.0), (0.42, -1.0))):
         mount_garm_turret(s, "ciws_%d" % (i + 1), deck, S(st), 4.0, 2.4, 0.45, 6.0,
                           x=sgn * 0.36 * B, body_mat="gun_metal",
                           dome_mat="hull_green", kind="anti_air")
-    for i, (st, sgn) in enumerate(((0.36, 1.0), (0.36, -1.0), (0.50, 1.0),
-                                   (0.50, -1.0), (0.70, 1.0), (0.70, -1.0))):
-        mount_garm_turret(s, "anti_air_%d" % (i + 1), deck, S(st), 3.6, 2.2, 0.4, 5.5,
-                          x=sgn * 0.42 * B, body_mat="gun_metal",
+    for i, (st, sgn) in enumerate(((0.50, 1.0), (0.50, -1.0), (0.62, 1.0),
+                                   (0.62, -1.0))):
+        mount_garm_turret(s, "anti_air_%d" % (i + 3), deck, S(st), 3.6, 2.2, 0.4,
+                          5.5, x=sgn * 0.42 * B, body_mat="gun_metal",
                           dome_mat="hull_green", group="anti_air", kind="anti_air")
     s.add_pair_at(swept_fin(9.5, 1.8, 13.0, sweep=0.55, rise=4.0, mat="hull_green",
                             group="wing"), (10.0, 5.0, S(0.40)))
@@ -3663,12 +3772,19 @@ def build_garmillas_gaiderol(s):
     s.add(bow_gun(9.0, 26.0, -L / 2.0, y=0.5, segments=20, collar=11.0,
                   housing_mat="hull_green", collar_mat="gun_metal"))
     s.hp("wave_motion_gun", "wmgun", (0.0, 0.5, S(0.06)), (0.0, 0.0, -1.0))
-    for st in (0.07, 0.10, 0.13, 0.16):
+    # ---- torpedo banks: 16 recessed ports, two rows per flank ------------
+    #  多数の魚雷発射管 - "two rows of 4-6 recessed circular ports on the flank of
+    #  the prow, stations 0.06-0.18" (research 01 section 2.3).  Hull openings, so
+    #  they take the merged `torpedo_tube` group.  CONFIG gives her no `torpedo`
+    #  weapon, so they are GEOMETRY ONLY: a family CONFIG never reads is not
+    #  claimed (the same treatment as Yukikaze's three tubes).
+    for st in (0.075, 0.105, 0.135, 0.165):
         zz = S(st)
-        x = hx_at(secs, zz, 2.0) * 0.94
-        for sgn in (1.0, -1.0):
-            s.add(box(2.0, 2.0, 2.6, center=(sgn * x, 2.0, zz), mat="deck_dark",
-                      group="hull"))
+        for yy in (5.4, 1.4):
+            for sgn in (1.0, -1.0):
+                face_x = hx_at(secs, zz, yy) * BELT_SCALE
+                s.add(hull_port(1.7, (sgn * (face_x - 0.6), yy, zz), axis="x",
+                                depth=1.2, group="torpedo_tube", segments=5))
     cz = S(0.40)
     s.add(frustum_box(30.0, 10.0, 80.0, center=(0.0, deck + 5.0, cz),
                       scale_top=(0.88, 0.92), mat="hull_olive", group="superstructure"))
@@ -3700,8 +3816,14 @@ def build_garmillas_gaiderol(s):
     #  what reads as "Garmillas battleship".
     for k in range(10):
         ang = 2.0 * math.pi * k / 10.0
-        ex = 20.0 * math.cos(ang)
-        ez = cz + 44.0 * math.sin(ang)
+        # 19 m across and 38 m fore-and-aft, not 20 x 44: a merged mount is baked
+        # at its position and its ring is 3.57 m across, so a 20 m ring reaches
+        # x = -23.6 and breaks SPEC 5 rule 7 (X extent == beamM = 46), while a
+        # 44 m ring puts the forward mounts at z = -79, inside turret_main_2's
+        # barbette (which ends at -78.7).  At 19 x 38 the outermost mount lands
+        # on x = 22.6 and the forward pair on z = -77, clear of the turret.
+        ex = 19.0 * math.cos(ang)
+        ez = cz + 38.0 * math.sin(ang)
         if k < 4:
             mount_garm_turret(s, "ciws_%d" % (k + 1), deck, ez, 3.4, 2.2, 0.4, 5.5,
                               x=ex, body_mat="gun_metal", dome_mat="hull_green",
@@ -3714,13 +3836,24 @@ def build_garmillas_gaiderol(s):
     s.add(frustum_box(3.4, 0.09 * L, 0.34 * L, center=(0.0, deck + 0.045 * L, S(0.60)),
                       scale_top=(0.45, 0.5), top_offset=(0.0, 0.06 * L),
                       mat="hull_olive", group="wing"))
-    for i, st in enumerate((0.18, 0.35, 0.58, 0.78)):
+    # 4 dorsal domed beam mounts.  The second sits at 0.25, not the research's
+    # 0.35: the citadel's 80 m footprint covers stations 0.29-0.51, so a mount at
+    # 0.35 would stand INSIDE its base (the containment audit caught exactly
+    # that).  The citadel is the more visible feature and keeps its station.
+    for i, st in enumerate((0.18, 0.25, 0.58, 0.78)):
         mount_garm_turret(s, "turret_main_%d" % (i + 1), deck, S(st), 8.4, 4.8,
                           1.4, 15.0, body_mat="gun_metal", dome_mat="hull_olive")
     for i, st in enumerate((0.25, 0.50, 0.72)):
-        mount_garm_turret(s, "turret_secondary_%d" % (i + 1), deck, S(st), 7.0, 4.0,
+        mount_garm_turret(s, "anti_air_%d" % (i + 7), deck, S(st), 7.0, 4.0,
                           1.1, 12.0, ventral=True, body_mat="gun_metal",
-                          dome_mat="hull_green", group="turret_secondary")
+                          dome_mat="hull_green", group="anti_air", kind="anti_air")
+    # CONFIG carries a `missile` weapon for her (mounts.missile = 1) although the
+    # research lists no launcher, so one flush 6-cell block is modelled on the
+    # dorsal spine abaft the citadel.  Flagged to the Lead as a canon/CONFIG
+    # disagreement: either she gets a launcher, or the CONFIG weapon goes.
+    s.add(missile_cell_box(2, 3, 1.2, 3.0, (0.0, deck + 1.0, S(0.70)), face="-z"))
+    s.hp("missile_launcher_1", "missile", (0.0, deck + 1.0, S(0.70) - 3.6),
+         (0.0, 0.0, -1.0))
     s.add_pair_at(swept_fin(14.0, 2.0, 16.0, sweep=0.5, rise=4.0, mat="hull_green",
                             group="wing"), (9.0, 6.0, S(0.30)))
     s.add_pair_at(box(1.6, 16.0, 50.0, center=(0.0, 4.0, 0.0), mat="hull_green",
@@ -3817,20 +3950,40 @@ def build_bolar_carrier(s):
                                       group=tname, caps=False))
         s.add(parts)                          # centred on its own pivot
         s.hp(tname, "turret", (0.0, deck, zz), (0.0, 0.0, -1.0))
+    # ---- retractable dual-purpose battery: 10 mounts per side ------------
+    #  10 retractable AA/anti-ship mounts per side in two rows along the flanks
+    #  at stations 0.15-0.85, offset +/-0.42 x beam (research 01 section 3.1),
+    #  plus the two retractable AA machine guns at the bridge base.  They are
+    #  the merged battery: nothing in CONFIG fires from `anti_air`, and she has
+    #  no secondary_battery, so no indexed family may claim them.
+    dp_names = []
     for sgn in (1.0, -1.0):
-        for st in (0.18, 0.30, 0.44, 0.58, 0.70, 0.82):
+        for row, (yy, sts) in enumerate(((9.6, (0.16, 0.28, 0.40, 0.52, 0.64)),
+                                         (4.6, (0.22, 0.34, 0.46, 0.58, 0.70)))):
+            for st in sts:
+                zz = S(st)
+                x = hx_at(secs, zz, yy) * 0.97
+                dp_names.append((sgn * x, yy, zz))
+    for i, (mx, my, mz) in enumerate(dp_names):
+        mount_pulse_laser(s, "anti_air_%d" % (i + 1), my, mz, mx, form="twin_75",
+                          group="anti_air")
+    for i, sgn in enumerate((1.0, -1.0)):
+        mount_pulse_laser(s, "anti_air_%d" % (len(dp_names) + i + 1), deck + 2.0,
+                          S(0.88), sgn * 20.0, form="twin_75", group="anti_air")
+    for i, (st, sgn) in enumerate(((0.24, 1.0), (0.24, -1.0), (0.66, 1.0))):
+        mount_aa(s, "ciws_%d" % (i + 1), deck, S(st), sgn * 0.40 * B, scale=1.2)
+    # ---- 12 space torpedo tubes, 6 per side, as hull openings ------------
+    #  宇宙魚雷発射管 x6 per side, stations 0.45-0.75, offset +/-0.38 x beam.
+    #  CONFIG gives her no `torpedo` weapon, so these are GEOMETRY ONLY - the
+    #  same treatment as Yukikaze's and the Gaiderol's tube banks.
+    for sgn in (1.0, -1.0):
+        for st in (0.46, 0.52, 0.58, 0.64, 0.70, 0.76):
             zz = S(st)
-            x = hx_at(secs, zz, 8.0) * 0.96
-            s.add(box(2.6, 2.4, 5.0, center=(sgn * x, 8.0, zz), mat="gun_metal",
-                      group="superstructure"))
-            if st == 0.18:
-                s.hp("turret_secondary_%d" % (1 if sgn > 0 else 2), "turret",
-                     (sgn * x, 9.2, zz), (0.0, 0.0, -1.0))
-        for st in (0.48, 0.56, 0.64, 0.72):
-            zz = S(st)
-            x = hx_at(secs, zz, -4.0) * 0.97
-            s.add(box(2.4, 2.4, 3.0, center=(sgn * x, -4.0, zz), mat="hull_black",
-                      group="hull"))
+            x = hx_at(secs, zz, -6.0) * 0.97
+            s.add(hull_port(1.8, (sgn * (x - 0.6), -6.0, zz), axis="x", depth=1.2,
+                            group="torpedo_tube", segments=5))
+        # the flank glow panels are her livery, not a weapon: they stay exactly
+        # where they were, one row per side, independent of the tube ports
         for st in (0.30, 0.46, 0.62, 0.78):
             zz = S(st)
             x = hx_at(secs, zz, -2.0)
@@ -3838,9 +3991,13 @@ def build_bolar_carrier(s):
                       mat="hull_black", group="hull"))
             s.add(box(1.0, 6.0, 0.038 * L, center=(sgn * (x - 2.2), -2.0, zz),
                       mat="engine_glow", group="hull"))
-    for i, (st, sgn) in enumerate(((0.24, 1.0), (0.24, -1.0), (0.66, 1.0),
-                                   (0.66, -1.0))):
-        mount_aa(s, "ciws_%d" % (i + 1), deck, S(st), sgn * 0.40 * B, scale=1.2)
+    # CONFIG carries a `missile` weapon for her (mounts.missile = 1) although the
+    # research lists no launcher, so one flush 6-cell block is modelled on the bow
+    # deck forward of the flight deck.  Flagged to the Lead as a canon/CONFIG
+    # disagreement: either she gets a launcher, or the CONFIG weapon goes.
+    s.add(missile_cell_box(2, 3, 1.4, 3.2, (0.0, deck + 1.0, S(0.10)), face="-z"))
+    s.hp("missile_launcher_1", "missile", (0.0, deck + 1.0, S(0.10) - 4.0),
+         (0.0, 0.0, -1.0))
     fin_root = 0.09 * B
     fin_span_z = 0.20 * L
     fin_len = ((0.5 * B - fin_root - math.sin(0.42) * fin_span_z / 2.0)

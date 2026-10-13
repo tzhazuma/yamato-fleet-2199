@@ -900,9 +900,7 @@
         "turret_main_1",
         "turret_main_2",
         "turret_main_3",
-        "turret_main_4",
-        "turret_secondary_1",
-        "turret_secondary_2"
+        "turret_main_4"
       ],
       "hardpoints": [
         {
@@ -1032,8 +1030,8 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
-          "kind": "turret",
+          "name": "missile_launcher_grenade_1",
+          "kind": "missile",
           "pos": [
             0.0,
             19.2,
@@ -1046,8 +1044,8 @@
           ]
         },
         {
-          "name": "turret_secondary_2",
-          "kind": "turret",
+          "name": "missile_launcher_grenade_2",
+          "kind": "missile",
           "pos": [
             0.0,
             13.529,
@@ -1377,7 +1375,7 @@
       "mtl": "kirishima.mtl",
       "lengthM": 205,
       "beamM": 34,
-      "triangles": 6920,
+      "triangles": 6936,
       "groups": [
         "hull",
         "superstructure",
@@ -1391,8 +1389,8 @@
         "ciws_2",
         "turret_main_1",
         "turret_main_2",
-        "turret_secondary_1",
-        "turret_secondary_2"
+        "turret_main_3",
+        "turret_main_4"
       ],
       "hardpoints": [
         {
@@ -1438,7 +1436,7 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
+          "name": "turret_main_3",
           "kind": "turret",
           "pos": [
             0.0,
@@ -1452,7 +1450,7 @@
           ]
         },
         {
-          "name": "turret_secondary_2",
+          "name": "turret_main_4",
           "kind": "turret",
           "pos": [
             0.0,
@@ -1699,7 +1697,7 @@
       "mtl": "yukikaze.mtl",
       "lengthM": 80,
       "beamM": 38,
-      "triangles": 4020,
+      "triangles": 3876,
       "groups": [
         "hull",
         "superstructure",
@@ -1711,9 +1709,7 @@
         "missile_launcher",
         "ciws_1",
         "turret_main_1",
-        "turret_main_2",
-        "turret_secondary_1",
-        "turret_secondary_2"
+        "turret_main_2"
       ],
       "hardpoints": [
         {
@@ -1759,34 +1755,6 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
-          "kind": "turret",
-          "pos": [
-            -2.4,
-            5.0,
-            -34.0
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_2",
-          "kind": "turret",
-          "pos": [
-            2.4,
-            5.0,
-            -34.0
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
           "name": "ciws_1",
           "kind": "anti_air",
           "pos": [
@@ -1798,48 +1766,6 @@
             0.0,
             0.0,
             -1.0
-          ]
-        },
-        {
-          "name": "torpedo_tube_bow",
-          "kind": "torpedo",
-          "pos": [
-            0.0,
-            -1.2,
-            -38.0
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "torpedo_tube_p1",
-          "kind": "torpedo",
-          "pos": [
-            2.433,
-            -1.2,
-            -28.0
-          ],
-          "dir": [
-            0.33035,
-            0.0,
-            -0.943858
-          ]
-        },
-        {
-          "name": "torpedo_tube_s1",
-          "kind": "torpedo",
-          "pos": [
-            -2.433,
-            -1.2,
-            -28.0
-          ],
-          "dir": [
-            -0.33035,
-            0.0,
-            -0.943858
           ]
         },
         {
@@ -1936,7 +1862,7 @@
       "mtl": "garmillas_dessler.mtl",
       "lengthM": 638,
       "beamM": 245,
-      "triangles": 9334,
+      "triangles": 9902,
       "groups": [
         "hull",
         "superstructure",
@@ -1945,6 +1871,8 @@
         "engine_nozzle",
         "wing",
         "radiator",
+        "anti_air",
+        "missile_launcher",
         "ciws_1",
         "ciws_2",
         "ciws_3",
@@ -1954,11 +1882,7 @@
         "turret_main_3",
         "turret_main_4",
         "turret_main_5",
-        "turret_main_6",
-        "turret_secondary_1",
-        "turret_secondary_2",
-        "turret_secondary_3",
-        "turret_secondary_4"
+        "turret_main_6"
       ],
       "hardpoints": [
         {
@@ -2060,10 +1984,10 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
-          "kind": "turret",
+          "name": "anti_air_1",
+          "kind": "anti_air",
           "pos": [
-            107.8,
+            0.0,
             -14.25,
             -127.6
           ],
@@ -2074,38 +1998,10 @@
           ]
         },
         {
-          "name": "turret_secondary_2",
-          "kind": "turret",
+          "name": "anti_air_2",
+          "kind": "anti_air",
           "pos": [
-            -107.8,
-            -14.25,
-            -127.6
-          ],
-          "dir": [
             0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_3",
-          "kind": "turret",
-          "pos": [
-            107.8,
-            -14.25,
-            63.8
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "turret_secondary_4",
-          "kind": "turret",
-          "pos": [
-            -107.8,
             -14.25,
             63.8
           ],
@@ -2164,6 +2060,20 @@
             -88.2,
             14.25,
             191.4
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "missile_launcher_1",
+          "kind": "missile",
+          "pos": [
+            0.0,
+            15.45,
+            174.64
           ],
           "dir": [
             0.0,
@@ -2264,7 +2174,7 @@
       "mtl": "garmillas_kelkapia.mtl",
       "lengthM": 240,
       "beamM": 48,
-      "triangles": 5912,
+      "triangles": 7752,
       "groups": [
         "hull",
         "superstructure",
@@ -2273,15 +2183,12 @@
         "engine_nozzle",
         "wing",
         "radiator",
+        "anti_air",
         "ciws_1",
         "ciws_2",
-        "ciws_3",
-        "ciws_4",
         "turret_main_1",
         "turret_main_2",
-        "turret_main_3",
-        "turret_secondary_1",
-        "turret_secondary_2"
+        "turret_main_3"
       ],
       "hardpoints": [
         {
@@ -2355,8 +2262,8 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
-          "kind": "turret",
+          "name": "anti_air_1",
+          "kind": "anti_air",
           "pos": [
             0.0,
             -11.653,
@@ -2369,8 +2276,8 @@
           ]
         },
         {
-          "name": "turret_secondary_2",
-          "kind": "turret",
+          "name": "anti_air_2",
+          "kind": "anti_air",
           "pos": [
             0.0,
             -11.653,
@@ -2411,10 +2318,38 @@
           ]
         },
         {
-          "name": "ciws_3",
+          "name": "anti_air_3",
           "kind": "anti_air",
           "pos": [
-            17.28,
+            20.16,
+            11.653,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_4",
+          "kind": "anti_air",
+          "pos": [
+            -20.16,
+            11.653,
+            0.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_5",
+          "kind": "anti_air",
+          "pos": [
+            20.16,
             11.653,
             28.8
           ],
@@ -2425,10 +2360,10 @@
           ]
         },
         {
-          "name": "ciws_4",
+          "name": "anti_air_6",
           "kind": "anti_air",
           "pos": [
-            -17.28,
+            -20.16,
             11.653,
             28.8
           ],
@@ -2502,7 +2437,7 @@
       "mtl": "garmillas_gaiderol.mtl",
       "lengthM": 350,
       "beamM": 46,
-      "triangles": 8162,
+      "triangles": 11202,
       "groups": [
         "hull",
         "superstructure",
@@ -2511,6 +2446,9 @@
         "engine_nozzle",
         "wing",
         "radiator",
+        "anti_air",
+        "torpedo_tube",
+        "missile_launcher",
         "ciws_1",
         "ciws_2",
         "ciws_3",
@@ -2518,10 +2456,7 @@
         "turret_main_1",
         "turret_main_2",
         "turret_main_3",
-        "turret_main_4",
-        "turret_secondary_1",
-        "turret_secondary_2",
-        "turret_secondary_3"
+        "turret_main_4"
       ],
       "hardpoints": [
         {
@@ -2531,6 +2466,146 @@
             0.0,
             0.5,
             -154.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_1",
+          "kind": "anti_air",
+          "pos": [
+            19.0,
+            13.836,
+            -35.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_2",
+          "kind": "anti_air",
+          "pos": [
+            15.371,
+            13.836,
+            -12.664
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_3",
+          "kind": "anti_air",
+          "pos": [
+            5.871,
+            13.836,
+            1.14
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "ciws_4",
+          "kind": "anti_air",
+          "pos": [
+            -5.871,
+            13.836,
+            1.14
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_1",
+          "kind": "anti_air",
+          "pos": [
+            -15.371,
+            13.836,
+            -12.664
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_2",
+          "kind": "anti_air",
+          "pos": [
+            -19.0,
+            13.836,
+            -35.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_3",
+          "kind": "anti_air",
+          "pos": [
+            -15.371,
+            13.836,
+            -57.336
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_4",
+          "kind": "anti_air",
+          "pos": [
+            -5.871,
+            13.836,
+            -71.14
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_5",
+          "kind": "anti_air",
+          "pos": [
+            5.871,
+            13.836,
+            -71.14
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_6",
+          "kind": "anti_air",
+          "pos": [
+            15.371,
+            13.836,
+            -57.336
           ],
           "dir": [
             0.0,
@@ -2558,7 +2633,7 @@
           "pos": [
             0.0,
             13.836,
-            -52.5
+            -87.5
           ],
           "dir": [
             0.0,
@@ -2595,8 +2670,8 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
-          "kind": "turret",
+          "name": "anti_air_7",
+          "kind": "anti_air",
           "pos": [
             0.0,
             -13.836,
@@ -2609,8 +2684,8 @@
           ]
         },
         {
-          "name": "turret_secondary_2",
-          "kind": "turret",
+          "name": "anti_air_8",
+          "kind": "anti_air",
           "pos": [
             0.0,
             -13.836,
@@ -2623,8 +2698,8 @@
           ]
         },
         {
-          "name": "turret_secondary_3",
-          "kind": "turret",
+          "name": "anti_air_9",
+          "kind": "anti_air",
           "pos": [
             0.0,
             -13.836,
@@ -2637,54 +2712,12 @@
           ]
         },
         {
-          "name": "ciws_1",
-          "kind": "anti_air",
+          "name": "missile_launcher_1",
+          "kind": "missile",
           "pos": [
-            18.4,
-            13.836,
-            -70.0
-          ],
-          "dir": [
             0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "ciws_2",
-          "kind": "anti_air",
-          "pos": [
-            -18.4,
-            13.836,
-            -70.0
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "ciws_3",
-          "kind": "anti_air",
-          "pos": [
-            18.4,
-            13.836,
-            63.0
-          ],
-          "dir": [
-            0.0,
-            0.0,
-            -1.0
-          ]
-        },
-        {
-          "name": "ciws_4",
-          "kind": "anti_air",
-          "pos": [
-            -18.4,
-            13.836,
-            63.0
+            14.836,
+            66.4
           ],
           "dir": [
             0.0,
@@ -2771,7 +2804,7 @@
       "mtl": "bolar_carrier.mtl",
       "lengthM": 400,
       "beamM": 110,
-      "triangles": 4056,
+      "triangles": 4700,
       "groups": [
         "hull",
         "superstructure",
@@ -2780,10 +2813,12 @@
         "engine_nozzle",
         "wing",
         "radiator",
+        "anti_air",
+        "torpedo_tube",
+        "missile_launcher",
         "ciws_1",
         "ciws_2",
         "ciws_3",
-        "ciws_4",
         "turret_main_1",
         "turret_main_2",
         "turret_main_3"
@@ -2846,12 +2881,12 @@
           ]
         },
         {
-          "name": "turret_secondary_1",
-          "kind": "turret",
+          "name": "anti_air_1",
+          "kind": "anti_air",
           "pos": [
-            26.207,
-            9.2,
-            -128.0
+            25.911,
+            9.6,
+            -136.0
           ],
           "dir": [
             0.0,
@@ -2860,12 +2895,292 @@
           ]
         },
         {
-          "name": "turret_secondary_2",
-          "kind": "turret",
+          "name": "anti_air_2",
+          "kind": "anti_air",
           "pos": [
-            -26.207,
-            9.2,
-            -128.0
+            29.328,
+            9.6,
+            -88.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_3",
+          "kind": "anti_air",
+          "pos": [
+            29.897,
+            9.6,
+            -40.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_4",
+          "kind": "anti_air",
+          "pos": [
+            29.897,
+            9.6,
+            8.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_5",
+          "kind": "anti_air",
+          "pos": [
+            29.287,
+            9.6,
+            56.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_6",
+          "kind": "anti_air",
+          "pos": [
+            27.619,
+            4.6,
+            -112.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_7",
+          "kind": "anti_air",
+          "pos": [
+            29.897,
+            4.6,
+            -64.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_8",
+          "kind": "anti_air",
+          "pos": [
+            29.897,
+            4.6,
+            -16.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_9",
+          "kind": "anti_air",
+          "pos": [
+            29.694,
+            4.6,
+            32.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_10",
+          "kind": "anti_air",
+          "pos": [
+            28.88,
+            4.6,
+            80.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_11",
+          "kind": "anti_air",
+          "pos": [
+            -25.911,
+            9.6,
+            -136.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_12",
+          "kind": "anti_air",
+          "pos": [
+            -29.328,
+            9.6,
+            -88.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_13",
+          "kind": "anti_air",
+          "pos": [
+            -29.897,
+            9.6,
+            -40.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_14",
+          "kind": "anti_air",
+          "pos": [
+            -29.897,
+            9.6,
+            8.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_15",
+          "kind": "anti_air",
+          "pos": [
+            -29.287,
+            9.6,
+            56.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_16",
+          "kind": "anti_air",
+          "pos": [
+            -27.619,
+            4.6,
+            -112.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_17",
+          "kind": "anti_air",
+          "pos": [
+            -29.897,
+            4.6,
+            -64.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_18",
+          "kind": "anti_air",
+          "pos": [
+            -29.897,
+            4.6,
+            -16.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_19",
+          "kind": "anti_air",
+          "pos": [
+            -29.694,
+            4.6,
+            32.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_20",
+          "kind": "anti_air",
+          "pos": [
+            -28.88,
+            4.6,
+            80.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_21",
+          "kind": "anti_air",
+          "pos": [
+            20.0,
+            16.0,
+            152.0
+          ],
+          "dir": [
+            0.0,
+            0.0,
+            -1.0
+          ]
+        },
+        {
+          "name": "anti_air_22",
+          "kind": "anti_air",
+          "pos": [
+            -20.0,
+            16.0,
+            152.0
           ],
           "dir": [
             0.0,
@@ -2916,12 +3231,12 @@
           ]
         },
         {
-          "name": "ciws_4",
-          "kind": "anti_air",
+          "name": "missile_launcher_1",
+          "kind": "missile",
           "pos": [
-            -44.0,
-            14.0,
-            64.0
+            0.0,
+            15.0,
+            -164.0
           ],
           "dir": [
             0.0,

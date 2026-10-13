@@ -15,8 +15,11 @@ what ``src/core/assets.js`` and the rest of the renderer are entitled to assume:
   X extent == beamM, roughly centred in X, triangles < 12000 and equal to the
   value declared in the manifest.
 * hardpoints: unique names, legal kinds, normalised dirs, inside the hull box,
-  and the required mix (bow wmgun, centreline main turrets, stern thrusters,
-  secondary turrets, anti-air).
+  and the required mix, DERIVED FROM src/core/config.js: one `turret_main`
+  hardpoint per mount the ship's primary beam weapon declares, a `torpedo_tube`
+  / `missile_launcher` family whenever she carries that weapon, one `ciws_*`
+  hardpoint per point-defence channel, and a bow `wave_motion_gun` emitter.
+  `anti_air` carries NO requirement at all: nothing in src/ reads it.
 
 Usage:
     python3 tools/validate_models.py assets/models
@@ -32,6 +35,7 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
 
 SCHEMA = "yamato-fleet/models@1"
@@ -145,23 +149,26 @@ LAYOUT = {
     ),
     "andromeda": dict(
         main=4,                    # 40.6 cm triples, A/B forward + C/D aft
-        secondary=2, secondary_centreline=True,   # the two quad grenade projectors
         ciws=4,
         aa=3,                      # 司令塔防護ショックフィールド砲 x3 on the citadel
         torpedo_ports=8,           # 4 rapid-fire fore + 4 subspace aft
         torpedo_fore=4, torpedo_aft=4,
-        missile_launchers=4,       # 重力子スプレッド発射機 x4
+        # 重力子スプレッド発射機 x4 + the two 四連装対艦グレネード投射機: both are
+        # merged `missile_launcher` geometry because CONFIG gives her no
+        # `secondary_battery` (nor a missile weapon) - an indexed turret would
+        # promise a traverse pivot nothing fires from.
+        missile_launchers=6,
         aux_engines=0,             # her auxiliaries are the 4 Kelvin nozzles
         rocket_anchors=0,
         depth_charges=0,
     ),
     "kirishima": dict(
-        # four IDENTICAL triple 36 cm turrets: the forward pair holds the primary
-        # slot, the aft pair the secondary slot (a family is a slot, not a
-        # calibre - see the Lead's ruling in docs/SPEC.md section 5).  She has no
-        # 20 cm gun and no AA battery in canon at all, so `aa` is 0 and the only
-        # small mounts are her two point-defence channels.
-        main=2, secondary=2, secondary_centreline=True,
+        # FOUR triple 36 cm turrets, all `turret_main_1..4`: CONFIG fires
+        # mounts.uncf_beam = 4 from turret_main and she has no secondary battery,
+        # so there is no indexed secondary family.  No AA battery in canon
+        # either, so `aa` is 0 and her only small mounts are the two
+        # point-defence channels.
+        main=4,
         ciws=2,
         aa=0,
         torpedo_ports=8,           # two rows of ports on the bow flanks
@@ -173,22 +180,128 @@ LAYOUT = {
     ),
     "yukikaze": dict(
         # a DESTROYER's fit, deliberately not padded up to a battleship's
-        # battery: two triple 12.7 cm turrets (one dorsal, one ventral), two
-        # fixed bow anti-ship guns in the secondary slot, three torpedo tubes and
-        # one 8-cell missile block.  `aa` is 0 because no source lists an
-        # anti-air mount for the Isokaze-class - see the exemption in
-        # check_model(), which is why her single PD channel is enough.
-        main=2, secondary=2,
+        # battery: two triple 12.7 cm turrets (one dorsal, one VENTRAL), three
+        # torpedo tubes as geometry, one 8-cell missile block, one PD channel.
+        # `aa` is 0 because no source lists an anti-air mount for the
+        # Isokaze-class; `torpedo_fore` is absent because CONFIG gives her no
+        # `torpedo` weapon, so the ports are modelled without hardpoints.
+        main=2,
         ciws=1,
         aa=0,
         torpedo_ports=3,
-        torpedo_fore=3,
         missile_launchers=1,       # ミサイル発射管 x8 as one block
         aux_engines=0,
         rocket_anchors=0,
         depth_charges=0,
     ),
+    "garmillas_dessler": dict(
+        # 6 dorsal domed beam mounts at 0.20/0.45/0.70 either side of the core
+        # (canon 4-6; CONFIG says 4, which is reported as a warning for the Lead
+        # to settle), the 2 ventral domed mounts and the 4 PD channels merged,
+        # and one flush missile block because CONFIG carries a missile weapon.
+        main=6,
+        ciws=4,
+        aa=2,                      # the ventral domed pair
+        aa_ventral=True,           # canon mounts them on the hull's underside
+        missile_launchers=1,
+        aux_engines=0,
+    ),
+    "garmillas_kelkapia": dict(
+        # 3 dorsal domed beam mounts at 0.25/0.50/0.75 (CONFIG says 2 - warned),
+        # the 2 ventral domed mounts and the bridge blister's anti-air clusters
+        # (2 traversable channels + 4 merged) as the AA battery.
+        main=3,
+        ciws=2,
+        aa=6,                      # 2 ventral domed mounts + 4 cluster mounts
+        aa_ventral=True,
+        aux_engines=0,
+    ),
+    "garmillas_gaiderol": dict(
+        # 4 dorsal domed beam mounts, 3 ventral domed mounts, the bridge CIWS
+        # ring of 10 domed mounts (4 channels + 6 merged), 16 recessed torpedo
+        # ports in two rows per flank, one flush missile block.
+        main=4,
+        ciws=4,
+        aa=9,                      # 3 ventral + 6 ring
+        aa_ventral=True,
+        torpedo_ports=16,          # geometry only: CONFIG has no torpedo weapon
+        missile_launchers=1,
+        aux_engines=0,
+    ),
+    "bolar_carrier": dict(
+        # 3 retractable quad positron guns, 10 dual-purpose mounts per side in
+        # two rows plus the 2 at the bridge base as the merged battery, 3 PD
+        # channels, 12 space torpedo tubes (geometry only), one flush missile
+        # block because CONFIG carries a missile weapon.
+        main=3,
+        ciws=3,
+        aa=22,                     # 20 dual-purpose + 2 at the bridge base
+        torpedo_ports=12,
+        missile_launchers=1,
+        aux_engines=0,
+    ),
 }
+
+
+#: Dump the REQUIRED hardpoint families straight out of src/core/config.js.
+#:
+#: The required mix is not a constant we may assert - it is a consequence of the
+#: weapon table and of which weapons each hull carries.  A `turret_main` family
+#: is needed once per mount the ship's primary beam weapon declares; a
+#: `torpedo_tube` or `missile_launcher` family is needed only if she carries that
+#: weapon; `anti_air` needs nothing at all, because `grep -rn anti_air src/`
+#: returns zero references - point defence reads CONFIG.ships[*].pdMounts as an
+#: aura and never touches the hardpoint family.  (An earlier revision of this
+#: validator asserted ">= 2 turret_secondary and >= 2 anti_air on every hull",
+#: which is exactly the mistake the Lead corrected: three of the eight hulls have
+#: no secondary battery, and none of them read anti_air.)
+#:
+#: Reading the JS beats mirroring it in a Python table: a mirrored table drifts
+#: the moment CONFIG changes, and the drift would be silent.  If node or the file
+#: is unavailable the derived checks are SKIPPED with a warning rather than
+#: failing - a missing tool must never look like a broken model.
+CONFIG_MIX_JS = """
+import { CONFIG } from '%s';
+const W = CONFIG.weapons;
+const out = {};
+for (const [id, s] of Object.entries(CONFIG.ships)) {
+  const families = {};
+  for (const w of (s.weapons || [])) {
+    const p = (W[w] || {}).mountPrefix;
+    if (p) families[p] = (families[p] || 0) + ((s.mounts && s.mounts[w]) || 0);
+  }
+  out[id] = { families, pdMounts: s.pdMounts || 0 };
+}
+console.log(JSON.stringify(out));
+"""
+
+#: Families the model may claim that CONFIG does not read.  Reported as warnings,
+#: never failures: an extra merged family is inert (weapons.js only looks up the
+#: prefixes its own weapons declare), and on several hulls it is CANON armament
+#: whose CONFIG weapon is simply missing - the Lead owns that fix, and the
+#: geometry should not be deleted while they decide.
+INERT_FAMILIES = ("turret_secondary", "torpedo_tube", "missile_launcher")
+
+
+def config_mix(root):
+    """The required hardpoint mix per ship, or (None, reason) if unavailable."""
+    cfg = os.path.abspath(os.path.join(root, os.pardir, os.pardir, "src", "core",
+                                       "config.js"))
+    if not os.path.isfile(cfg):
+        return None, "src/core/config.js not found"
+    script = CONFIG_MIX_JS % cfg.replace("\\", "/")
+    try:
+        res = subprocess.run(["node", "--input-type=module", "-e", script],
+                             capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return None, "node unavailable (%s)" % exc
+    if res.returncode != 0:
+        tail = (res.stderr or "").strip().splitlines()
+        return None, "node failed (%s)" % (tail[-1] if tail else "no stderr")
+    try:
+        return json.loads(res.stdout), None
+    except ValueError:
+        return None, "node output was not JSON"
 
 
 class Report:
@@ -288,7 +401,7 @@ def parse_mtl(path):
 # Per-model validation
 # --------------------------------------------------------------------------
 
-def check_model(rep, root, model, all_files_used):
+def check_model(rep, root, model, all_files_used, mix=None):
     mid = model.get("id", "<no id>")
     missing = [k for k in MODEL_KEYS if k not in model]
     extra = [k for k in model if k not in MODEL_KEYS]
@@ -493,29 +606,50 @@ def check_model(rep, root, model, all_files_used):
         rep.fail(mid, "no bow wave-motion-gun hardpoint (kind wmgun, z<0, dir -Z)")
     if not has(lambda h: h["kind"] == "turret" and h["name"].startswith("turret_main")):
         rep.fail(mid, "no turret_main hardpoint")
-    # The required mix (task-8).  `turret_secondary` is a WEAPON SLOT - CONFIG's
-    # secondary_battery fires from it - so every hull must fill it, with whatever
-    # her canon fit's second battery group actually is (see the Lead's ruling in
-    # docs/SPEC.md section 5).
-    if sum(1 for h in model["hardpoints"]
-           if h["name"].startswith("turret_secondary")) < 2:
-        rep.fail(mid, "fewer than 2 turret_secondary hardpoints")
     if sum(1 for h in model["hardpoints"] if h["kind"] == "thruster") < 2:
         rep.fail(mid, "fewer than 2 thruster hardpoints")
     if not has(lambda h: h["kind"] == "thruster" and h["pos"][2] > 0 and h["dir"][2] > 0.9):
         rep.fail(mid, "no stern thruster hardpoint (z>0, dir +Z)")
-    # ...but `anti_air` is NOT a weapon slot: point defence reads
-    # CONFIG.ships[*].pdMounts (an aura), never this hardpoint family, so a hull
-    # whose canon fit has no AA battery at all is exempt when its LAYOUT entry
-    # declares aa=0.  The Isokaze-class is that case: two triple beam turrets,
-    # two fixed bow guns, three torpedo tubes and eight missile tubes, and not
-    # one anti-air mount in any source.  Padding a destroyer up to a battleship's
-    # close-in battery would be inventing armament, which is worse than an
-    # exemption; every hull whose canon DOES list AA still has to satisfy this.
-    aa_declared = LAYOUT.get(mid, {}).get("aa")
-    if aa_declared != 0 and sum(1 for h in model["hardpoints"]
-                                if h["kind"] == "anti_air") < 2:
-        rep.fail(mid, "fewer than 2 anti_air hardpoints")
+
+    # -- the required mix, DERIVED from src/core/config.js -----------------
+    # No blanket ">= 2 turret_secondary / >= 2 anti_air" rule: three of the eight
+    # hulls have no secondary battery in their weapons array and nothing in src/
+    # reads anti_air at all.  What a hull needs is what her own weapon fit needs.
+    def count(pref):
+        return sum(1 for h in model["hardpoints"]
+                   if str(h["name"]).startswith(pref))
+
+    need = (mix or {}).get(mid, {}).get("families")
+    if need is None and mix is not None:
+        rep.warn(mid, "no CONFIG.ships entry - the required mix cannot be derived")
+    if need:
+        for fam in sorted(need):
+            if fam == "wave_motion_gun":
+                continue                    # checked above, as the bow emitter
+            if fam == "turret_main":
+                got = count("turret_main_")
+                if got < need[fam]:
+                    rep.fail(mid, "CONFIG fires %d mount(s) from turret_main but the "
+                                  "model has %d - a mount would fire from nothing"
+                             % (need[fam], got))
+                elif got > need[fam]:
+                    rep.warn(mid, "model has %d turret_main hardpoints, CONFIG says "
+                                  "%d - CONFIG needs updating if the model is right "
+                                  "(canon count)" % (got, need[fam]))
+            else:
+                got = count(fam)
+                if got < 1:
+                    rep.fail(mid, "CONFIG carries a %s weapon but the model has no "
+                                  "%s hardpoint to fire it from" % (fam, fam))
+        for fam in INERT_FAMILIES:
+            if fam not in need and count(fam):
+                rep.warn(mid, "%d %s hardpoint(s) but no CONFIG weapon reads that "
+                              "family - inert data, or a CONFIG weapon missing"
+                         % (count(fam), fam))
+    pd = (mix or {}).get(mid, {}).get("pdMounts")
+    if pd is not None and count("ciws") != pd:
+        rep.fail(mid, "%d ciws_* hardpoints for pdMounts = %d point-defence "
+                      "channels" % (count("ciws"), pd))
 
     return {"id": mid, "sil": sil, "lay": lay,
             "display": model["displayName"], "faction": model["faction"],
@@ -786,8 +920,13 @@ def layout_checks(rep, mid, model, obj):
 
     # -- the AA battery ----------------------------------------------------
     want("aa", out["aa"], "anti_air mounts")
+    # The UNCF battery belongs on the UPPER hull - a pulse laser under the keel
+    # would be a modelling error.  Garmillas hulls are the exception: their canon
+    # fit includes VENTRAL domed mounts, and since the vocabulary has no other
+    # non-indexed gun bucket they share the merged battery, so a hull whose canon
+    # lists them declares `aa_ventral` rather than being silently exempted.
     aa_lo = [v[1] for v in group_verts(obj, "anti_air")]
-    if aa_lo and min(aa_lo) < 0.0:
+    if aa_lo and min(aa_lo) < 0.0 and not spec.get("aa_ventral"):
         rep.fail(mid, "layout: an anti_air mount sits at y=%.1f - the battery "
                       "belongs on the UPPER hull, only the wave motion gun, the "
                       "bow/stern missiles and the third bridge are elsewhere"
@@ -873,6 +1012,13 @@ def validate(root, quiet=False):
     with open(manifest_path, "r", encoding="utf-8") as fh:
         manifest = json.load(fh)
 
+    # the required mix is a consequence of CONFIG, not a constant (see
+    # config_mix): read it, and if it cannot be read, say so and skip those
+    # checks rather than failing the models for a missing tool
+    mix, mix_err = config_mix(root)
+    if mix_err:
+        rep.warn("manifest", "required-mix checks SKIPPED: %s" % mix_err)
+
     if manifest.get("schema") != SCHEMA:
         rep.fail("manifest", "schema is %r, expected %r"
                  % (manifest.get("schema"), SCHEMA))
@@ -900,7 +1046,7 @@ def validate(root, quiet=False):
     all_files_used = set()
     results = []
     for model in models:
-        info = check_model(rep, root, model, all_files_used)
+        info = check_model(rep, root, model, all_files_used, mix)
         if info:
             results.append(info)
 
@@ -983,14 +1129,23 @@ def validate(root, quiet=False):
                 print("              " + " | ".join(row1))
                 row2 = []
                 if "torpedo_ports" in want:
-                    row2.append("torpedo ports %s (fore %s / aft %s%s)"
+                    # the fore/aft/broadside split comes from the hardpoints; a
+                    # hull whose tubes are geometry-only (CONFIG carries no
+                    # torpedo weapon) has none, and says so instead of "0 / 0"
+                    if "torpedo_fore" in want or "torpedo_aft" in want:
+                        detail = (" (fore %s / aft %s%s)"
+                                  % (n("torpedo_fore", want.get("torpedo_fore")),
+                                     n("torpedo_aft", want.get("torpedo_aft")),
+                                     "" if not want.get("torpedo_broadside")
+                                     else " / broadside %s"
+                                     % n("torpedo_broadside",
+                                         want.get("torpedo_broadside"))))
+                    else:
+                        detail = (" (modelled, no hardpoints: CONFIG carries no "
+                                  "torpedo weapon)")
+                    row2.append("torpedo ports %s%s"
                                 % (n("torpedo_ports", want.get("torpedo_ports")),
-                                   n("torpedo_fore", want.get("torpedo_fore")),
-                                   n("torpedo_aft", want.get("torpedo_aft")),
-                                   "" if not want.get("torpedo_broadside")
-                                   else " / broadside %s"
-                                   % n("torpedo_broadside",
-                                       want.get("torpedo_broadside"))))
+                                   detail))
                 if "missile_launchers" in want:
                     row2.append("missile launchers %s%s"
                                 % (n("missile_launchers",

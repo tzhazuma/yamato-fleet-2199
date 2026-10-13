@@ -49,13 +49,13 @@ X extent == `beamM`, the 12 000-triangle budget and the hardpoint rules.
 | id | name | JA | faction | class | lengthM | beamM | triangles | groups | hardpoints |
 |---|---|---|---|---|---|---|---|---|---|
 | `yamato` | Yamato (BBY-01) | ヤマト | uncf | Yamato-class | 333 | 48 | 11668 | 24 | 58 |
-| `andromeda` | Andromeda (AAA-01) | アンドロメダ | uncf | Andromeda-class | 444 | 62 | 9800 | 20 | 32 |
-| `kirishima` | Kirishima (CCV-05) | 霧島 | uncf | Kongo-class (refit) | 205 | 34 | 6920 | 14 | 20 |
-| `yukikaze` | Yukikaze (DD-117) | 雪風 | uncf | Isokaze-class | 80 | 38 | 4020 | 13 | 14 |
-| `garmillas_dessler` | Desler flagship | デスラー旗艦 | garmillas | Desler flagship | 638 | 245 | 9334 | 21 | 20 |
-| `garmillas_kelkapia` | Kelkapia-class cruiser | ケルカピア型 | garmillas | Kelkapia-class | 240 | 48 | 5912 | 16 | 14 |
-| `garmillas_gaiderol` | Gaiderol-class battleship | ガイデロル型 | garmillas | Gaiderol-class | 350 | 46 | 8162 | 18 | 16 |
-| `bolar_carrier` | Bolar carrier | ボラー空母 | bolar | Bolar carrier | 400 | 110 | 4056 | 14 | 14 |
+| `andromeda` | Andromeda (AAA-01) | アンドロメダ | uncf | Andromeda-class | 444 | 62 | 9800 | 18 | 32 |
+| `kirishima` | Kirishima (CCV-05) | 霧島 | uncf | Kongo-class (refit) | 205 | 34 | 6936 | 14 | 20 |
+| `yukikaze` | Yukikaze (DD-117) | 雪風 | uncf | Isokaze-class | 80 | 38 | 3876 | 11 | 9 |
+| `garmillas_dessler` | Desler flagship | デスラー旗艦 | garmillas | Desler flagship | 638 | 245 | 9902 | 19 | 19 |
+| `garmillas_kelkapia` | Kelkapia-class cruiser | ケルカピア型 | garmillas | Kelkapia-class | 240 | 48 | 7752 | 13 | 16 |
+| `garmillas_gaiderol` | Gaiderol-class battleship | ガイデロル型 | garmillas | Gaiderol-class | 350 | 46 | 11202 | 18 | 23 |
+| `bolar_carrier` | Bolar carrier | ボラー空母 | bolar | Bolar carrier | 400 | 110 | 4700 | 16 | 34 |
 
 Lengths are canon per `docs/research/01-yamato-ships.md` section 0.1 and were
 accepted by the Lead into docs/SPEC.md section 5: `kirishima` 205 m (was 222),
@@ -78,9 +78,60 @@ consumer must take from the manifest rather than hardcoding.
 | `torpedo` | hull torpedo tubes (`torpedo_tube_*`), openings in the plating |
 | `missile` | missile launchers (`missile_launcher_*`), ventral tubes and box/funnel cells |
 
-Every ship carries a bow `wave_motion_gun` emitter, centreline `turret_main`
-mounts, at least two `turret_secondary` and two `anti_air` mounts, and stern
-`engine_*` bells.
+The required mix is **derived from `src/core/config.js`, not asserted**: one
+`turret_main` hardpoint per mount a hull's primary beam weapon declares, a
+`torpedo_tube` or `missile_launcher` family only if she carries that weapon, one
+`ciws_*` per point-defence channel, and a bow `wave_motion_gun` emitter.  Only
+Yamato carries a `secondary_battery`, so only Yamato has `turret_secondary_*`.
+`anti_air` carries no requirement at all - nothing under `src/` reads that
+family; point defence is an aura driven by `CONFIG.ships[*].pdMounts`.
+
+A group family is a **weapon slot**, not a calibre, and an INDEXED name is a
+promise: the geometry is authored on its own traverse pivot and a hardpoint of
+the same name exists to place it.  Anything that does not turn - a torpedo port,
+a fixed bow gun, a ventral beam mount that nothing fires from - ships as merged
+geometry under `superstructure` or a merged weapon bucket instead.
+
+### Per-ship armament layout (task-9 rebuild)
+
+All eight hulls are rebuilt against `docs/research/01-yamato-ships.md` (one
+section per ship) and `docs/research/05-yamato-armament-layout.md` for the
+grammar; `tools/validate_models.py` asserts each hull's canon counts from a
+`LAYOUT` entry whose source is named in the table's header.
+
+* **yamato** - 3 triple 48 cm mains, 2 centreline 20 cm secondaries, 40 pulse
+  lasers (4 `ciws_*` + 38 merged), 28 torpedo ports (6 fore / 6 aft / 16
+  broadside), 12 missile launchers (10 ventral), third bridge, catapult, 2
+  rocket anchors, 2 depth-charge racks, 2 auxiliary engines.
+* **andromeda** - twin wave-motion-gun muzzles in the bow, 4 triple 40.6 cm
+  (A/B forward, C/D aft with D superfiring over C), 3 citadel shock-field guns,
+  4 `ciws_*`, 8 torpedo ports, 6 merged launcher meshes (4 graviton spread
+  launchers + 2 quad grenade projectors), the two six-barrel lateral beam
+  projectors on the flanks, 1 + 4 Kelvin nozzles.
+* **kirishima** - the protruding fixed 46 cm bow cannon (its muzzle IS the bow
+  plane; the hull's stem is recessed 12 m behind it), 4 triple 36 cm all
+  `turret_main_1..4`, 8 torpedo ports in two rows on the bow flanks, two 8-cell
+  missile blocks, 3 clustered bells, squat bridge at 0.35.
+* **yukikaze** - a destroyer's fit: 2 triple 12.7 cm (one dorsal, one VENTRAL,
+  mirrored in Y with its pivot on the keel), 2 fixed bow anti-ship guns as merged
+  geometry, 3 torpedo ports, one 8-cell missile block, 1 main bell + 3 verniers,
+  the 艦首装甲翼 bow plate with six fins, faired canopy, drop tanks.
+* **garmillas_dessler** - Desler cannon in a raked prow, 6 dorsal domed beam
+  mounts, 2 ventral domed mounts and 4 `ciws_*` in the merged battery, one flush
+  missile block, the separable 3-tier core ship with its docking seam, the dorsal
+  launch aperture, 3 large + 2 small bells.
+* **garmillas_kelkapia** - slim teardrop, twin bow emitters, 3 dorsal domed beam
+  mounts, 2 ventral domed mounts, 2 `ciws_*` + 4 merged mounts as the bridge
+  blister's anti-air clusters, dorsal fin ridge, 2 flared bells + 1 vernier.
+* **garmillas_gaiderol** - vertical blade hull under a tall citadel, 4 dorsal
+  domed beam mounts, 3 ventral domed mounts, the **bridge CIWS ring of 10 domed
+  mounts** (4 `ciws_*` + 6 merged), 16 recessed torpedo ports in two rows per
+  flank, one flush missile block, 4 bells in 2x2.
+* **bolar_carrier** - the wide horizontal Bolar cannon slab, 3 retractable quad
+  positron guns, 20 retractable dual-purpose mounts (10 per side in two rows)
+  plus 2 at the bridge base as the merged battery, 12 space torpedo tubes (6 per
+  side), 3 `ciws_*`, one flush missile block, the full-length red-glowing flight
+  deck with its stern landing aperture, island at the very stern, 4 flared bells.
 
 ### Yamato armament layout (task-9 rebuild)
 

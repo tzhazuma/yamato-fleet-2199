@@ -136,8 +136,13 @@ export const CONFIG = {
       maxSpeed: 90, boostSpeed: 180, reverseSpeed: 30,
       yawRate: 0.20, pitchRate: 0.15, rollRate: 0.50, accel: 25, brakeDecel: 60,
       mass: 1.0, collisionRadius: 52,
-      weapons: ['shock_cannon', 'secondary_battery', 'torpedo', 'wmgun'],
-      mounts: { shock_cannon: 3, secondary_battery: 2, torpedo: 1, wmgun: 1 },
+      weapons: ['shock_cannon', 'secondary_battery', 'torpedo', 'missile', 'wmgun'],
+      // missile: 1 mount, not 12. The model emits all twelve canon launchers
+      // (10 ventral tubes + the eight-barrel box + the funnel launcher) for
+      // silhouette fidelity, but the game issues the missile WEAPON once and
+      // fires it from a single fire-control channel — 36 DPS is a meaningful
+      // addition to a 360 DPS ship and a role-breaking one to a destroyer.
+      mounts: { shock_cannon: 3, secondary_battery: 2, torpedo: 1, missile: 1, wmgun: 1 },
       pdMounts: 4,
       aiDoctrine: 'uncf',
     },
@@ -200,7 +205,7 @@ export const CONFIG = {
       yawRate: 0.35, pitchRate: 0.26, rollRate: 0.75, accel: 38, brakeDecel: 65,
       mass: 0.66, collisionRadius: 36,
       weapons: ['garmillas_beam'],
-      mounts: { garmillas_beam: 2 },
+      mounts: { garmillas_beam: 3 },   // canon: three dorsal domed mounts at 0.25/0.50/0.75
       pdMounts: 2,
       aiDoctrine: 'garmillas',
     },
@@ -226,7 +231,9 @@ export const CONFIG = {
       yawRate: 0.18, pitchRate: 0.14, rollRate: 0.45, accel: 22, brakeDecel: 52,
       mass: 1.40, collisionRadius: 100,
       weapons: ['garmillas_beam', 'missile', 'wmgun'],
-      mounts: { garmillas_beam: 4, missile: 1, wmgun: 1 },
+      // 6, not 4: canon gives the Dessler 4-6 dorsal domed mounts and the model
+      // emits six at the canon stations (0.20/0.45/0.70 x +/-0.22B).
+      mounts: { garmillas_beam: 6, missile: 1, wmgun: 1 },
       pdMounts: 4,
       aiDoctrine: 'garmillas',
     },
