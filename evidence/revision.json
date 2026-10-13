@@ -1,8 +1,15 @@
 {
-  "capturedAt": "2026-10-13T03:39:31.885Z",
-  "gitHead": "06d3ade2c77dce6df573827de3aeb2dbed836fef",
-  "note": "Regenerated after the eight-hull armament rebuild. The previous revision.json predated it, so any VERIFY.md item whose evidence was captured against the old models needs re-running.",
-  "fileCount": 95,
+  "capturedAt": "2026-10-13T07:37:32.056Z",
+  "gitHead": "d864fb951acdb1afeef32bb359ed649d96112b47",
+  "workingTreeClean": false,
+  "note": "Regenerated after the eight-hull armament rebuild and the firing-indicator rework. docs/VERIFY.md states the revision it verified; if this file disagrees with the tree in front of you, re-run the commands in that file rather than trusting its results.",
+  "fileCount": 91,
+  "deletedFiles": [
+    "evidence/03-shared-model-instances.jpg",
+    "evidence/05-explosion.jpg",
+    "evidence/06-closeup-enemy.jpg",
+    "evidence/08-yamato-hero.jpg"
+  ],
   "files": {
     ".gitignore": {
       "sha256": "931d0a0544d73b5c8d5dc976db59984078cc6eed45e9d06b2949b483b29326a8",
@@ -101,8 +108,8 @@
       "bytes": 14705
     },
     "docs/VERIFY.md": {
-      "sha256": "25d6925c49464e014bffabbd0de75fc62a19762a7846e96b4367cf97dcc4eac0",
-      "bytes": 32363
+      "sha256": "7bf9080fab6340b6909d40d2fa2d9f2261b941311fd6d267c64b0bface32fff8",
+      "bytes": 35304
     },
     "docs/img/chase-view.jpg": {
       "sha256": "dc0f1950e46e4e883f4d56a361163ec252961f1b53a0b27a2fdf32d190cd65dc",
@@ -149,40 +156,24 @@
       "bytes": 11451
     },
     "evidence/01-loaded-hud.jpg": {
-      "sha256": "bca16998183ffc2a0f5eb15279781c13f2a421a970a62624e2eb2e0212bcd2eb",
-      "bytes": 203682
+      "sha256": "8da7ef3bddfe4495c1f158130dbd5a9f21c4dda6ad97a5ebc7ab753ec5e82512",
+      "bytes": 72218
     },
     "evidence/02-combat.jpg": {
-      "sha256": "3f0540aa02c5e1f0292aaaa97539ad175e5694fe83f71b4d2a64fba069f2c530",
-      "bytes": 213690
-    },
-    "evidence/03-shared-model-instances.jpg": {
-      "sha256": "934a76c1b3a075e6e0a30abf98761dd1763f44ab2dee0d1e6ecffd833e9fed85",
-      "bytes": 228079
+      "sha256": "85cc781360a1c1e1f22435b1f7d585464ee7c76396a01557077812a49540f4f7",
+      "bytes": 83865
     },
     "evidence/04-wmgun-firing.jpg": {
-      "sha256": "28726148b49130e7dba24b71ae32a95bca4743bda988b6d0171bb11a15c41bcf",
-      "bytes": 245606
-    },
-    "evidence/05-explosion.jpg": {
-      "sha256": "5f3d6a6a33da8f2a74adf02939e9a3073e3c39e0681ed85f875dfa4d31b07acf",
-      "bytes": 259547
-    },
-    "evidence/06-closeup-enemy.jpg": {
-      "sha256": "5bb876bb509c094dbcdfcf7ac5f4e70b07a24fe160af772cdb2db90869a09be4",
-      "bytes": 285025
+      "sha256": "fb80434a593dcd217f19fee3adf4efe65e5c45adc1327a74d4ef887be3db972a",
+      "bytes": 86110
     },
     "evidence/07-victory.jpg": {
-      "sha256": "8dbdbf0aa8ce09e0307c3b55860b3ef5cd69c886b757b332caf95945265d7bb5",
-      "bytes": 186893
-    },
-    "evidence/08-yamato-hero.jpg": {
-      "sha256": "dabc4e22a9b15d024568145f853a9c5b1676a3c3de227e95c2d2c21c6a08585f",
-      "bytes": 261048
+      "sha256": "aad718158fc2f2c21e50ca375243d0f5f0cf6a1514f4f353a00ecfd0ab91f6cd",
+      "bytes": 74865
     },
     "evidence/09-defeat.jpg": {
-      "sha256": "c3eb4e84da65db33c4524b288161b90c322e576ed13e3a73f7108b1af3419cc6",
-      "bytes": 194631
+      "sha256": "92032451c6b07d01bc7a40c70545a79eef5e516f18a94064cf4b8d8b48adaa05",
+      "bytes": 63539
     },
     "evidence/console-probe.html": {
       "sha256": "620962a066c870c9fc7bb656a15753b199a87d5a6e82367baff96c7133980f8f",
@@ -193,8 +184,8 @@
       "bytes": 6672
     },
     "evidence/revision.json": {
-      "sha256": "c2aed91930ba7f768518bac2c45151d2a6511a3e7b4c440afad7cc642f8c89b9",
-      "bytes": 6233
+      "sha256": "ab5c30154d030982570ba6da15ce081e398f9d0eb7ef0ebb1572b27e6e1b6224",
+      "bytes": 14021
     },
     "index.html": {
       "sha256": "c8ccc55e6a7b2712fe3b52da097421d9842bd9707227879db6582197d60b5fb8",
@@ -217,8 +208,8 @@
       "bytes": 41535
     },
     "src/core/config.js": {
-      "sha256": "4ac2ba17595a2c795335f57844d706893412ac425944cb8946a8704a61ff1bc9",
-      "bytes": 22537
+      "sha256": "c48b663600a87684c2d21fe021b95d418e88a1401307e2a62b87c50bddac40f3",
+      "bytes": 22585
     },
     "src/core/fallback_manifest.js": {
       "sha256": "699eb8b5dc8e6e3156cec979ce2082af6c578cd1abcf26d4195282ba6b2deb3d",
@@ -269,8 +260,8 @@
       "bytes": 4960
     },
     "src/ui/hud.js": {
-      "sha256": "d9dd261f07e434cbaab79febef9cdeed83aaecb8142cd54e266e5628ea2b94cf",
-      "bytes": 84622
+      "sha256": "8a9a37c19029fbf5ead34a524979d9b56f682a9ac53dd1f301dc52b50433bdd0",
+      "bytes": 86520
     },
     "src/ui/radar.js": {
       "sha256": "a648a5c7476348a6c4fb105b7f1149605448cb5f7a8e22c006b2b626a8dc6810",

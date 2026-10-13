@@ -1,582 +1,605 @@
-# VERIFY.md — independent verification of YAMATO FLEET 2199 (demo v0.1)
+# VERIFY.md — independent verification of YAMATO FLEET 2199
 
-> Owner: **verifier** (task-5). This file, `tests/**` and `evidence/**` are the
-> only things I wrote. I did not modify product code (`src/**`, `tools/**`,
-> `assets/**`, `index.html`) at any point.
+> Owner: **verifier-2** (task-10). I wrote `tests/**`, `evidence/**` and this file
+> and nothing else. I did not modify `src/**`, `tools/**`, `assets/**` or
+> `index.html` at any point — `git status` at the end of the run shows only
+> `evidence/**` (re-shot), `evidence/revision.json` (regenerated) and
+> `tests/make_revision.mjs` (new).
 >
-> **Verdict: PASS on the SPEC §7 Definition of Done, with two open items that I
-> could not close** (see [§5 Known gaps / not verified](#5-known-gaps--not-verified)).
-> Six defects were found; five were fixed by their owners during the run and
-
-> ## ⚠ Scope after the armament rebuild (added by the Lead)
+> **This file describes the tree at `d864fb9` and nothing else.** It replaces an
+> earlier verification written before all eight hulls were rebuilt; that earlier
+> text is not carried forward, because almost none of it was re-established
+> here. Everything below was re-run from scratch on the frozen revision, and
+> where I could not confirm something I say so rather than inheriting it.
 >
-> `evidence/revision.json` has been regenerated against the current tree, but
-> **the verification in this file was performed against the PREVIOUS revision**,
-> before all eight ship models were rebuilt against the sourced 2199 armament
-> specification (`docs/research/05-yamato-armament-layout.md`).
->
-> What that means for the items below:
->
-> - **Still valid** — anything that does not depend on ship geometry: the unit
->   suite, the provenance/asset-contract tests, the balance measurements, the
->   wave flow, the weapon mechanics (arc gating, point defence focus fire, the
->   wave motion gun subsystem), and the audio/HUD behaviour.
-> - **Needs re-running** — anything measured in triangles, draw calls or model
->   structure: item 10 (performance) in particular, and any screenshot evidence
->   showing a ship. The fleet is now 62 432 triangles across eight hulls with
->   completely different geometry, and the renders in `evidence/` show the old
->   models.
-> - **Superseded** — the model-shape assertions. `tools/validate_models.py` now
->   carries a measured `LAYOUT` table per hull and exits 0, and the provenance
->   suite is at 116/116, but those are the Lead's runs, not independent ones.
->
-> Re-verification by someone other than the author is still outstanding. Do not
-> read this file as covering the current revision until it is re-run.
-> re-verified here, one (`BLOOM-1`) was a transient revision I re-checked as
-> clean.
+> **Verdict: the three gates PASS. Two real geometry defects, four smaller ones,
+> and one significant observation.** The defects are reported, not fixed — they
+> are in other people's write scope.
 
 ---
 
 ## 0. Revision verified
 
-Everything in this file was verified against the tree below. `evidence/revision.json`
-contains a SHA-256 for every file in `src/`, `assets/`, `tools/`, `index.html`
-and `package.json`.
-
 | | |
 |---|---|
-| `treeHash` | `7a003144830a4603fa67da4a5434e47d218cc1a31b342aa36aac8b9213463e2e` |
-| captured | 2026-10-11T12:24:51Z (20:24 Asia/Shanghai) |
-| `src/weapons/weapons.js` | `aebf66f467e892d5…` |
-| `src/entities/ship.js` | `fa94377e34994ad1…` |
-| `src/core/assets.js` | `a2fee307a679efda…` |
-| `src/core/config.js` | `9681734f08d06f9d…` |
-| `src/ui/hud.js` | `2c9e56e558fae8f2…` |
-| `src/ui/radar.js` | `a648a5c7476348a6…` |
-| `src/core/audio.js` | `675dc3d6bc64f223…` |
-| `src/ai/fleetai.js` | `bfc8d63d7bbe8bad…` |
-| `assets/models/manifest.json` | `d3e2f7f06af2afb0…` |
+| `gitHead` | `d864fb951acdb1afeef32bb359ed649d96112b47` |
+| commit | `d864fb9` — *Firing indicator: a true arc sector on the ship's plane* |
+| captured | 2026-10-13T07:24:04Z (15:24 Asia/Shanghai) |
+| files hashed | 95 (`evidence/revision.json`) |
+| working tree | clean apart from this verification's own files |
 
-**The tree moved under me four times** (models regenerated twice, the HUD
-reworked, and four product fixes landed). Every result below is from the
-revision above or explicitly labelled as an earlier revision. Item 9 (HUD /
-radar / audio) was deliberately re-run **last**, after the HUD rework, per the
-Lead's request.
+`evidence/revision.json` was **stale when I started** — it recorded `06d3ade`,
+three commits behind HEAD. It is now regenerated at `d864fb9` by
+[`tests/make_revision.mjs`](../tests/make_revision.mjs), which is committed so
+the snapshot is reproducible:
+
+```bash
+node tests/make_revision.mjs     # rewrites evidence/revision.json
+```
+
+The tree moved once during the run: the Lead landed the firing-indicator rework
+(`d864fb9`) while I was reading the models. I stopped, asked, and re-ran every
+gate against the frozen revision rather than reporting results from a tree that
+no longer existed. **One gate result from the pre-freeze revision was discarded
+for this reason** (the first `node --test` run, at `25ea8cf`).
+
+### Environment, stated up front because it limits what the numbers mean
+
+* **Host load average 114–158** throughout. An unrelated `qemu-system-aarch64`
+  Android emulator was pinning ~133 % CPU and `WindowServer` ~83 %. The machine
+  was not idle and I did not control it.
+* The shared browser window reported **`document.hidden === true` for the whole
+  session**, which suspends `requestAnimationFrame`. The demo therefore had to
+  be driven through the deterministic stepper in
+  [`evidence/loop-probe.html`](../evidence/loop-probe.html).
+* Consequence: **the trustworthy performance number is CPU milliseconds per
+  frame, not FPS** (see [§5](#5-performance)). I do not publish a wall-clock FPS
+  figure, because at load 158 it would measure the host.
 
 ---
 
-## 1. Deliverable 1 — `node --test tests/`
+## 1. The three gates
 
-### Command and raw output
+All three were run at `d864fb9`, after the freeze.
+
+### 1.1 `node --test tests/` — **PASS, 116/116**
 
 ```
-$ node --test tests/
-ℹ tests 113
+ℹ tests 116
 ℹ suites 0
-ℹ pass 113
+ℹ pass 116
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 1059.302833
+ℹ duration_ms 1514.432875
 ```
 
-Per file:
+Run twice (once early, once after adding `tests/make_revision.mjs`) — 116/116
+both times. The new file does not match `node --test`'s discovery patterns, so
+it does not enter the count.
+
+### 1.2 `tools/validate_models.py assets/models` — **PASS, exit 0**
 
 ```
-tests/config.test.mjs             pass=29
-tests/fallback_manifest.test.mjs  pass=11
-tests/math.test.mjs               pass=21
-tests/objparse.test.mjs           pass=20
-tests/provenance.test.mjs         pass=14
-tests/rng.test.mjs                pass=18
+summary: 8 ships, 65836 triangles total, 211 hardpoints total
+warning: andromeda: 6 missile_launcher hardpoint(s) but no CONFIG weapon reads that family - inert data, or a CONFIG weapon missing
+warning: kirishima: 2 missile_launcher hardpoint(s) but no CONFIG weapon reads that family - inert data, or a CONFIG weapon missing
+warning: yukikaze: 1 missile_launcher hardpoint(s) but no CONFIG weapon reads that family - inert data, or a CONFIG weapon missing
+OK - all 8 models satisfy the SPEC section 4/5 asset contract
 ```
 
-All six files are pure logic: no `three`, no DOM, no network. They import
-`src/core/{objparse,math,rng,config,fallback_manifest}.js` and read
-`assets/models/**` as text.
+**The fleet is 65 836 triangles, not 62 432.** The task brief states 62 432 and
+the previous VERIFY.md's scope warning repeats it, but the brief's own per-hull
+figures (11 668 + 11 202 + 9 902 + 9 800 + 7 752 + 6 936 + 4 700 + 3 876) sum to
+**65 836**, which is what the validator and the OBJ files both report. The
+per-hull numbers in the brief are all correct; only the total is wrong.
 
-### What each file covers
+### 1.3 `tools/gen_models.py` determinism — **PASS, and stronger than asked**
 
-| File | Coverage |
-|---|---|
-| [`tests/objparse.test.mjs`](../tests/objparse.test.mjs) | `parseOBJ` group names survive byte-exact, `usemtl` per group, `mtllib`, quad fan-triangulation to exactly `[0,1,2,0,2,3]`, negative indices, `v/vt/vn` + `v//vn` + bare `v` refs, comments/CRLF/blank lines, `o` as a group, missing `vn` sentinel, **malformed faces skipped not thrown**, out-of-range faces. `parseMTL` names, packed `Kd`/`Ks`/`Ke` hex, `Ns`, `d`, `Tr` inversion, clamping, defaults. |
-| [`tests/math.test.mjs`](../tests/math.test.mjs) | `interceptTime` positive / no-solution / degenerate-quadratic / zero-relative-velocity, plus a **root-verification test** that re-substitutes every returned `t` into the intercept equation; `wrapAngle` range + congruence mod τ; `clamp`, `clamp01`, `lerp`, `smoothstep`, `sign`, `moveToward`, `damp` monotonicity + no-overshoot + `dt=0`/`rate=0` no-ops, `dist`, `distSq`, `formatDistance`, `formatTime`. |
-| [`tests/rng.test.mjs`](../tests/rng.test.mjs) | same seed → identical 500-draw sequence; different seeds diverge; string seeding via `hashSeed`; default seed `0x5eed`; `next()` in `[0,1)` over 20 000 draws; `range` bounds and end coverage; `int` inclusive + integral + hits every value; `jitter` symmetry and mean; `chance(0)`/`chance(1)`; `pick`; `shuffle` permutation + input not mutated; `gauss` mean/spread; **`fork()` independence, determinism, tag-sensitivity and that forking does not advance the parent**. |
-| [`tests/config.test.mjs`](../tests/config.test.mjs) | The balance contract — see [§2](#2-deliverable-1b--balance-contract) below. |
-| [`tests/fallback_manifest.test.mjs`](../tests/fallback_manifest.test.mjs) | SPEC §5 shape, one entry per `CONFIG.ships` key, every field present, palette-only materials, hardpoint names/kinds/finite pos+dir, **every weapon on every ship has a matching hardpoint family**, ciws count == `pdMounts`, hardpoints inside the hull envelope, lengths match SPEC §5, JSON round-trip, purity (two calls identical). |
-| [`tests/provenance.test.mjs`](../tests/provenance.test.mjs) | The licensing rule — see [§3](#3-deliverable-1c--provenance-test). |
+Three runs into scratch directories, then compared against each other *and*
+against the shipped files:
 
-### Two honest notes about the parser
+```
+README.md                  a=6bcf4200cea87f50 b=6bcf4200cea87f50 c=6bcf4200cea87f50 shipped=6bcf4200cea87f50
+andromeda.obj              a=01c02d27eb4b1f2b b=01c02d27eb4b1f2b c=01c02d27eb4b1f2b shipped=01c02d27eb4b1f2b
+bolar_carrier.obj          a=f690f0c4f4bf71f3 b=f690f0c4f4bf71f3 c=f690f0c4f4bf71f3 shipped=f690f0c4f4bf71f3
+garmillas_dessler.obj      a=884f4d8769860ee6 b=884f4d8769860ee6 c=884f4d8769860ee6 shipped=884f4d8769860ee6
+garmillas_gaiderol.obj     a=607439c2e6bcc86e b=607439c2e6bcc86e c=607439c2e6bcc86e shipped=607439c2e6bcc86e
+garmillas_kelkapia.obj     a=01984efff969cfad b=01984efff969cfad c=01984efff969cfad shipped=01984efff969cfad
+kirishima.obj              a=e86346c2dbcba92d b=e86346c2dbcba92d c=e86346c2dbcba92d shipped=e86346c2dbcba92d
+manifest.json              a=0dfd7a2fc664a1cc b=0dfd7a2fc664a1cc c=0dfd7a2fc664a1cc shipped=0dfd7a2fc664a1cc
+yamato.obj                 a=07a7b7ccd33c53cf b=07a7b7ccd33c53cf c=07a7b7ccd33c53cf shipped=07a7b7ccd33c53cf
+yukikaze.obj               a=10b1bb0e2a7a934b b=10b1bb0e2a7a934b c=10b1bb0e2a7a934b shipped=10b1bb0e2a7a934b
+… (all 17 .obj/.mtl/manifest files identical in all four columns)
+```
 
-* Group identity in `parseOBJ` is `(name, material)`, so the generator's real
-  `g hull` + `usemtl hull_grey` pair produces **one empty record and one solid
-  record** with the same name. This is expected and harmless — `assets.js`
-  skips zero-triangle groups — and the tests now assert the real behaviour
-  rather than an assumed one. Group *names* survive byte-exact.
-* `Rng.gauss()` is documented as "~unit spread" but is actually scaled by
-  `2/√3`, giving sd `0.5774 = 1/√3`. `gauss()` is **not called anywhere in
-  `src/`**, so this has no gameplay effect. Pinned by a test so a future change
-  is visible; reported as an observation, not a defect.
+Three runs byte-identical to each other is what the gate asked for. That they
+are *also* byte-identical to the shipped `assets/models/**` is the stronger
+result: **the committed assets are exactly what the generator produces** — no
+hand-editing, no drift between the generator and what ships. I generated into
+scratch directories rather than over `assets/models` so the check could not
+itself perturb the artifact it was checking.
 
 ---
 
-## 2. Deliverable 1b — balance contract
+## 2. The rebuilt models, adversarially
 
-`tests/config.test.mjs` pins `docs/research/02-combat-mechanics.md` §1 against
-`src/core/config.js` under the project's fire-rate rule
-`perMountDPS = damage * salvo / cooldown` with **`salvo` per mount**:
+The question here is not "is there geometry" but "is the geometry *right*". All
+checks below read the OBJ and `manifest.json` directly and are independent of
+`tools/validate_models.py`.
 
-| check | result |
-|---|---|
-| every ship `shield + armor + hull` == researched `totalEHP` (yamato 9000, andromeda 11000, kirishima 4000, yukikaze 1000, dessler 9600, kelkapia 4200, gaiderol 8200, bolar 7000) | ✔ 8/8 |
-| shield regen rate + delay per ship (§1.1) | ✔ 8/8 |
-| per-mount DPS == research for shock_cannon 45.0, secondary 29.33, torpedo 86.67, garmillas_beam 12.0, missile 36.0, bolar_beam 16.8 | ✔ |
-| player ship DPS == mounts × per-mount (shock 135.0, secondary 58.67, torpedo 86.67) | ✔ |
-| all-guns player DPS == 193.7 DP/s | ✔ 193.70 |
-| every `mounts` key and `weapons` entry names a real weapon, no orphans either way | ✔ |
-| every `mountPrefix` matches a generated or synthesised hardpoint family | ✔ |
-| `wmgun.chargeTime` ∈ [6,10] (is 8.0) and `cooldown` ∈ [45,70] (is 60.0), `arcDeg` 3, `shieldMultiplier` 1.25 | ✔ |
-| WMG one-shots a Kelkapia (4200) but cannot one-shot a Yamato (9000) | ✔ |
-| missile hp 120 / torpedo hp 150; torpedo `shieldMultiplier` 0.60, `armorMultiplier` 1.50 | ✔ |
-| ranges 2000 / 1200 / 1500 / 2500 / 12000 | ✔ |
-| waves reference only real ship ids; compositions match research §1.6 | ✔ |
-| `damage.layering == ['shield','armor','hull']`, `subsystemDamageFraction` 0.15, `critChance` 0.08, no armor/hull regen | ✔ |
-| point defence `{range 900, dpsPerMount 20, targetKinds ['missile','torpedo']}` | ✔ |
-| every `CONFIG.keys` binding SPEC §6.9 requires | ✔ |
-| every weapon `sound` resolves to an `_snd_*` synth or an `ALIASES` key in `audio.js` | ✔ |
+### 2.1 What holds up
+
+**The third bridge is genuinely below the keel — PASS.**
+
+```
+yamato  third_bridge y [-27.52 .. -11.32]  z [-63.00 .. -33.00]  x [-11.00 .. 11.00]
+        hull keel at that station y = -14.46  (global hull min -14.82)
+        -> protrudes 13.06 m below the local keel / 12.70 m below the global keel
+```
+
+The pod's bottom sits 12.70 m below the lowest point of the hull and its top
+(−11.32) is *above* the keel, so it is attached and hanging, not floating. Only
+the Yamato has one, which is correct — no other hull in this fleet carries a
+third bridge.
+
+**Indexed mounts are authored pivot-local, so they orbit the right point — PASS.**
+This is the check that matters most, because `src/core/assets.js` places every
+group matching `^(turret_main|turret_secondary|ciws|missile_launcher|torpedo_tube)_\d+$`
+at its hardpoint with `mesh.position.copy(pivotHp.pos)`. If the generator had
+authored those groups in world space, every indexed mount would be offset by
+*twice* its pivot and fly off the ship.
+
+The decisive evidence is that `turret_main_1` and `turret_main_2` — 30 m apart
+on the hull — have **identical** local geometry centres `(0, 6.83, −8.12)`, and
+`turret_main_3` is the mirror `(0, 6.83, +8.12)`. World-space authoring would
+have made those centres differ by the hardpoint delta. The largest local centre
+offset anywhere is 11.76 m on the 444 m Andromeda, i.e. the size of the turret,
+not a position.
+
+Confirmed live as well: the three meshes named `turret_main_1` (the OBJ group is
+split per material) all carry pivot `(0.00, 17.47, −124.00)` and traverse in
+perfect unison — identical `rotation.y` before and after a 90-frame traverse.
+
+**Torpedo ports are flush with the plating — PASS.**
+
+Distance from each weapon hardpoint to the nearest hull triangle:
+
+| hull | weapon hardpoints | max distance | median | buried or floating |
+|---|---|---|---|---|
+| yamato | 47 | 0.20 m | 0.01 m | none |
+| andromeda | 23 | 0.39 m | 0.02 m | none |
+| kirishima | 13 | 0.06 m | 0.02 m | none |
+| yukikaze | 3 | 0.07 m | 0.05 m | none |
+| garmillas_kelkapia | 10 | 0.11 m | 0.02 m | none |
+
+An earlier binary inside/outside test appeared to show 25 of 47 Yamato
+hardpoints "inside the hull". That was **my test being wrong, not the model**:
+a point sitting *on* a surface is a coin-flip for a parity test. Measuring the
+distance instead shows every port within 0.20 m of the plating. I record the
+false alarm because the corrected method is the reason to believe the PASS.
+
+**No mount interpenetrates another on seven of the eight hulls.** A full
+pairwise sweep (sample each mount's surface, test each sample for being inside
+the other mount's closed mesh) found **zero** interpenetrating pairs on
+andromeda, kirishima, yukikaze, dessler, kelkapia, gaiderol and bolar.
+
+### 2.2 What does not hold up — two defects
+
+Both are on the Yamato foredeck, and they share one root cause: **the foredeck
+stations are laid out by gunhouse pivot, and barrel overhang is not accounted
+for.** The generator's own comment at `tools/gen_models.py:2553` says *"The
+stations are set so the gun houses CLEAR each other"* — the gun houses do; the
+barrels do not.
+
+#### `YAMATO-BARREL-1` — MEDIUM — the forward secondary turret's barrels are buried inside main turret #2
+
+```
+turret_main_2       pivot (0, 24.00, -94.00)   world bbox z [-124.94 .. -79.30]
+turret_secondary_1  pivot (0, 24.00, -73.00)   world bbox z [ -88.70 .. -66.70]
+
+turret_secondary_1 surface samples: 14720;  inside turret_main_2: 2294 (15.6 %)
+  intruding region: x ±6.6, y 34.46..37.67, z -88.68..-80.45
+CONTROL: turret_main_2 samples inside turret_secondary_1: 29 / 15040 (0.19 %)
+```
+
+`turret_secondary_1` sits at z = −73 and trains forward (−Z). Its 12 m barrels
+reach z = −88.7, which is **inside** `turret_main_2`'s gunhouse volume
+(z −108 … −80). About 8.2 m of the secondary's barrel length is inside the main
+turret — roughly two thirds of it. Both mounts sit at y = 24.00, so the
+secondary's gun axis (y ≈ 36.1) is inside the main turret's gunhouse
+(y 24.00 … 37.67) rather than above it.
+
+The control matters: the aft turret's surface returns 0/4000 against turret #1,
+so the test is not simply reporting "everything intersects everything".
+
+#### `YAMATO-BARREL-2` — LOW/MEDIUM — main turret #2's muzzles penetrate main turret #1's roof
+
+```
+turret_main_2 barrel-region surface samples: 3120
+  inside turret_main_1: 100 (3.21 %)
+  intruding region: x ±10.2, y 30.35..31.14, z -124.88..-122.02
+  deepest sample 0.80 m below turret_main_1's roof top (y = 31.14)
+CONTROL: turret_main_3 (aft) samples inside turret_main_1: 0 / 4000
+```
+
+The *axes* of #2's barrels do clear #1's roof — the barrel axis is at y ≈ 32.88
+against a roof at 31.14, a 1.7 m margin, so the superfiring arrangement is
+sound in principle. But the modelled barrels are chunky stylised cylinders of
+~2.97 m radius, so the **underside** of each muzzle dips to y ≈ 29.91 and passes
+through #1's roof plate. All three barrels are affected across a 2.9 m band.
+
+Honest scale: 0.80 m on a 333 m hull is not visible from the chase camera. I
+report it because it is exactly the class of defect the brief asked for —
+geometry that is *present but wrong*, which a static render at normal range
+would not reveal — and because it is the same root cause as `YAMATO-BARREL-1`,
+which *is* visible.
+
+**The validator cannot see either one.** `validate_models.py` reports
+`superfiring 6.53m (>= 6.0m), #2 aft` — a pivot-rise proxy. Turret #2 is indeed
+raised 6.53 m, and that proxy passes while both interpenetrations exist. The
+proxy is not wrong about what it measures; it just cannot substitute for
+checking whether the barrels actually clear.
 
 ---
 
-## 3. Deliverable 1c — provenance test
+## 3. The CONFIG-derived mount rule can fail — proven, not asserted
 
-The SPEC §8 promise ("we copy *no* third-party art, audio, or model data") is
-now machine-checked by [`tests/provenance.test.mjs`](../tests/provenance.test.mjs):
+The brief was explicit: a rule that cannot fail is not a check. So I broke it on
+purpose. Everything ran on a **copy** under `/tmp`; `assets/**` was never
+touched.
 
-1. **Every file under `assets/models/` is named in `manifest.json`** (as `obj`
-   or `mtl`) or is `manifest.json` / `README.md` itself. Orphan list must be
-   empty. ✔
-2. **No binary, texture or audio file exists anywhere under `assets/`.** A
-   forbidden-extension denylist (`.png .jpg .gif .tga .dds .ktx .webp .svg
-   .mp3 .wav .ogg .flac .glb .fbx .zip .ttf …`) plus a strict allow-list of
-   `.obj .mtl .json .md .txt` for *every* file under `assets/`. ✔
-3. Every file under `assets/` is valid UTF-8 with **no NUL bytes**; no hidden
-   dot-files. ✔
-4. The manifest names no file that does not exist (no dangling refs), and has
-   exactly one OBJ + one MTL per ship. ✔
-5. Every OBJ is **ASCII**, has **no n-gons** (max polygon is a quad), and is
-   under the **12 000 triangle** budget; the file's own fan-triangulated count
-   **equals the manifest's advertised `triangles`**. ✔
-6. Every OBJ declares its `mtllib`, writes `vn` normals, contains **no `vt`
-   texture coordinates**. ✔
-7. OBJ group names and MTL material names stay inside the SPEC §5 vocabulary
-   (the generator additionally emits `wing` and `radiator`, which it advertises
-   in `manifest.groups`; the test asserts file groups == manifest groups
-   exactly). ✔
-8. Ships fit their advertised `lengthM` along Z within 2 % and are centred in X
-   within 25 % of the beam. ✔
-9. Every OBJ carries the `gen_models.py` provenance header, and the generator
-   writes the frozen schema string. ✔
-
-**Result: PASS.** "We ship no third-party art" is now checkable by a single
-command.
-
----
-
-## 4. Deliverable 2 — browser end-to-end verification
-
-### Method (and its limits)
-
-`window.__YAMATO__` is the live `world`. Two verifier instruments were written
-into `evidence/` (my write scope) to make the browser side reproducible:
-
-* [`evidence/console-probe.html`](../evidence/console-probe.html) — reproduces
-  `index.html`'s DOM shell and import map exactly, installs
-  `console.error/warn/log` + `window.onerror` + `unhandledrejection` hooks
-  **before** importing `src/main.js`, then calls the real `boot()`. This is the
-  only way to capture the app's own console traffic from document-start.
-* [`evidence/loop-probe.html`](../evidence/loop-probe.html) — the same, plus a
-  `requestAnimationFrame` capture shim exposing `window.__RUN__(frames, dtMs)`,
-  which invokes the **real** `frame()` closure `src/main.js` registered
-  (containing `simulate()`, `updateWaveFlow()`, `handlePlayerWeapons()`, death
-  handling and `endGame()`) with synthetic, exactly-spaced timestamps. The
-  product's loop code is untouched; only its clock source changes.
-
-`loop-probe.html` was necessary because the shared browser window is used by
-several teammates: it repeatedly reported `document.hidden === true`, which
-suspends `rAF` entirely (and throttles `setTimeout` to ~1 Hz), so `world.time`
-stops advancing and no wave/victory/defeat transition can be observed in real
-time. Where a measurement needed the real clock (FPS) I said so explicitly.
-
-**Screenshots**: the compositor screenshot is only fresh while the tab is
-visible. I therefore (a) used `browser_switch_tab` immediately before each
-capture, and (b) verified **every** image by opening it and reading it, and by
-comparing SHA-256 against the previous capture to catch stale frames. Two
-"identical hash" cases were caught and re-shot this way.
-
-### Item-by-item results
-
-| # | Check | Verdict | Evidence |
+| # | mutation on the scratch copy | expected | observed |
 |---|---|---|---|
-| 1 | Page loads, `window.__YAMATO__` exists, `state === 'playing'`, zero console errors **and warnings from our own code** | **PASS** | see below |
-| 2 | All 8 models load, `placeholder === false`, triangles < 12 000 | **PASS** | see below |
-| 3 | Player can move; yaw/pitch/roll change the quaternion | **PASS** | see below |
-| 4 | Each weapon fires; projectile count == `mounts × salvo`; damage inside range; refused outside range and outside arc | **PASS** | see below |
-| 5 | WM gun charges to 1.0 in ~`chargeTime`, fires, ≥ 4000 to a cruiser, drains the engine, refused off-bow (±3°) | **PASS** (after fix `WMG-ARC-1`) | see below |
-| 6 | Point defence destroys some incoming torpedoes/missiles before impact; does **not** engage shells | **PASS** (after fix `PD-1`) | see below |
-| 7 | Strict shield → armor → hull; **subsystem damage only from hull-layer hits** | **PASS** | see below |
-| 8 | Enemy destroyed + `kill` event; wave 1→2→3 after `waveLull`; victory and defeat reachable | **PASS** | see below |
-| 9 | HUD/radar/audio are the real classes and update without throwing | **PASS** | see below |
-| 10 | `renderer.info` + HUD FPS with ~6 ships and live projectiles | **PASS** | see below |
+| — | control, unmodified | exit 0 | **exit 0** |
+| A | yamato `turret_main` hardpoints 3 → 2 | FAIL | **exit 1** — `CONFIG fires 3 mount(s) from turret_main but the model has 2 - a mount would fire from nothing` |
+| B | yamato `turret_secondary` hardpoints removed entirely | FAIL | **exit 1** — `CONFIG carries a turret_secondary weapon but the model has no turret_secondary hardpoint to fire it from` |
+| C | yamato `ciws` 4 → 3 (CONFIG `pdMounts` 4) | FAIL | **exit 1** — `3 ciws_* hardpoints for pdMounts = 4 point-defence channels` |
+| D | yamato `turret_main` 3 → 4 (extra) | WARN | **WARN** `model has 4 turret_main hardpoints, CONFIG says 3 - CONFIG needs updating if the model is right (canon count)`, plus a FAIL from the *separate* canon-count table: `layout: 4 turret_main mounts, canon has 3` |
+| E | kirishima `missile_launcher` hardpoints removed | warning for kirishima disappears, others stay | **exactly that** — andromeda and yukikaze still warn, kirishima no longer does |
+
+**Conclusion: the rule is load-bearing and falsifiable.** Three independent
+breaks each turn it red. Case E also shows the inert-hardware warning tracks
+reality rather than being boilerplate.
+
+Case D is worth reading twice: an extra mount produces a *warning* from the
+CONFIG rule and a *failure* from the frozen canon-count table. Those are two
+different checks doing two different jobs, and both behaved correctly.
+
+### 3.1 One weakness in the rule's plumbing — LOW
+
+`config_mix()` resolves the config as `<root>/../../src/core/config.js`. If the
+tool is pointed anywhere other than `<project>/assets/models`, it cannot find
+`config.js` and **the whole derived rule is skipped with a warning**:
+
+```
+# same broken yamato (turret_main 3 -> 2), models dir outside the project layout:
+warning: manifest: required-mix checks SKIPPED: src/core/config.js not found
+FAIL - 2 contract violation(s):
+  - yamato: indexed group 'turret_main_3' has no hardpoint of the same name …
+  - yamato: layout: 2 turret_main mounts, canon has 3
+
+# identical break, models dir in the canonical place:
+FAIL - 3 contract violation(s):
+  - yamato: indexed group 'turret_main_3' has no hardpoint of the same name …
+  - yamato: layout: 2 turret_main mounts, canon has 3
+  - yamato: CONFIG fires 3 mount(s) from turret_main but the model has 2 …   <-- the derived rule
+```
+
+The skip is deliberate and documented in the tool ("a missing tool must never
+look like a broken model"), and in this case two other checks still caught the
+break. But pointing the validator at a copy is precisely what a reviewer does,
+and it is exactly then that the CONFIG↔model reconciliation goes quiet. The tool
+exits non-zero either way here; a break that *only* the derived rule catches
+would not be caught at all.
+
+### 3.2 The inert-hardware warnings — PASS, and accurate
+
+Three hulls warn, not two: **andromeda 6**, kirishima 2, yukikaze 1
+`missile_launcher` hardpoints with no CONFIG weapon reading that family. The
+brief names only kirishima and yukikaze; andromeda is the third. They **warn**
+(the validator still exits 0), which is correct — the geometry is deliberate
+canon hardware per `docs/research/05` §6, and deleting it would be worse than
+leaving it inert. Case E above proves the warning is not boilerplate: removing
+the hardware removes exactly that hull's warning.
 
 ---
 
-#### Item 1 — load, state, console cleanliness
+## 4. Browser end-to-end, at `d864fb9`
+
+Driven through [`evidence/loop-probe.html`](../evidence/loop-probe.html), which
+captures `src/main.js`'s real frame callback and re-invokes it with synthetic,
+exactly-spaced timestamps. Product code is untouched; only the clock source
+changes.
+
+### Item 1 — boot, state, console cleanliness — **PASS**
 
 ```
-{"phase":"ready","consoleErrors":[],"consoleWarnings":[],"windowErrors":[],
- "unhandledRejections":[],"state":"playing","bootErrVisible":false,
- "usedFallbackManifest":false}
+{"title":"[100%] 準備完了 / ready","hasWorld":true,"state":"playing","ships":6,
+ "bootDisplay":"none","bootOpacity":"0","consoleErrors":0,"consoleWarnings":0,
+ "windowErrors":0,"unhandledRejections":0}
 ```
 
-Zero errors, zero warnings, zero window errors, zero unhandled rejections —
-measured over a full session that included 8 model loads, 3 wave transitions,
-victory, defeat, ~5000 simulated frames and every weapon firing. `#boot-err`
-stayed hidden.
+**The boot screen clears.** `#boot` computes to `display:none` with `opacity:0`,
+so the `display:none` fallback the Lead added for the throttled-tab case is
+doing its job — the fade did not stall.
 
-*Transient note*: at one intermediate revision a warning
-`[scene] bloom resolution does not match the composer render target
-{"composer":[2582,1608],"bloom":[1,1],"pixelRatio":2}` appeared at boot. That
-revision was mid-edit; on the verified revision the guard is silent and bloom is
-genuinely active (`renderTargetBright` 1291×804, mip chain 1291×804 → 646×402 →
-323×201 → 162×101 → 81×51). `bloomPass.resolution` reading `[1,1]` is a
-three.js quirk (`UnrealBloomPass.setSize` resizes the render targets but never
-updates that property) and is **not** a defect.
-
-#### Item 2 — models
+### Item 2 — models — **PASS**
 
 ```
-yamato 10940   andromeda 11988   kirishima 8872   yukikaze 4628
-garmillas_dessler 8662   garmillas_kelkapia 5912
-garmillas_gaiderol 7346  bolar_carrier 4056
-all placeholder:false, all manifest.triangles === runtime triangles
+yamato 11668 | yukikaze 3876 ×2 | garmillas_kelkapia 7752 ×3
+all placeholder:false, all triangles === manifest triangles
+uniqueObject3D 6 | scene groups: yamato, yukikaze ×2, garmillas_kelkapia ×3 | shieldBubbles 6
 ```
 
-**Observation (not a defect):** `andromeda` at 11 988 triangles is **12 under**
-the 12 000 SPEC §5 budget. Any further detailing of that hull will breach it;
-`tests/provenance.test.mjs` will fail loudly when it does.
+`uniqueObject3D === 6` for 6 ships is the regression check for the old
+`SHARED-OBJ3D-1` defect (one `Object3D` shared per class, so 4 of 6 ships were
+never drawn). **It has not come back.** One shield bubble per ship, six groups
+in the scene.
 
-#### Item 3 — movement
+### Item 3 — movement — **PASS**
 
-Real `KeyboardEvent`s dispatched at `window`, read back through the real `Input`
-class and the real `simulate()` control block:
-
-```
-throttle (KeyW)  : throttle 0.911, moved 8.06 m, speed 15.53 m/s over 1.65 s
-yaw      (KeyA)  : quaternion Δ 10.244°, forward 10.244°, up 0.000°   -> pure yaw about local +Y
-pitch    (KeyI)  : quaternion Δ  7.543°, forward  7.543°, up 7.543°   -> pure pitch about local +X
-roll     (KeyQ)  : quaternion Δ 25.145°, forward  0.000°, up 25.145°  -> pure roll about local -Z
-reverse  (KeyS)  : throttle -0.976, moved -6.04 m along Z (astern)
-boost  (Shift+W) : 60.72 m/s at 2.5 s vs 15.53 m/s unboosted
-```
-
-The rotation-axis assertions are the strong part: yaw leaves `up` fixed, roll
-leaves `forward` fixed, pitch moves both.
-
-#### Item 4 — weapons
+Real `KeyboardEvent`s at `window`, read back through the real `Input` and
+`simulate()`:
 
 ```
-salvo sizes   : shock_cannon 3 == 3x1 | secondary_battery 4 == 2x2 | torpedo 4 == 1x4 | wmgun 1
-damage        : 3 shells at 800 m -> shield 1200 -> 930, exactly 270 DP landed
-range refusal : shock@2500 m -> false, 0 spawned (range 2000)
-                positive control shock@1900 m -> true, 3 spawned
-arc refusal   : shock@170° false | shock@140° true | torpedo@90° false | torpedo@30° true
+throttle (KeyW)  : throttle 0.988, moved 31.70 m, speed 20.89 m/s
+yaw      (KeyA)  : forward Δ 11.218°, up Δ  0.000°   -> pure yaw about local +Y
+pitch    (KeyI)  : forward Δ  6.310°, up Δ  6.310°   -> pure pitch
+roll     (KeyQ)  : forward Δ  0.000°, up Δ 28.045°   -> pure roll
 ```
 
-All eight models load, all weapons fire, and every refusal has a positive
-control so the test cannot pass by refusing everything.
+The rotation-axis assertions are the strong part: yaw leaves `up` untouched,
+roll leaves `forward` untouched, pitch moves both.
 
-#### Item 5 — wave motion gun (after fix `WMG-ARC-1`)
+### Item 4 — weapons — **PASS**
 
-```
-charge        : 481 frames = 8.0167 s vs chargeTime 8.0 (within one frame)
-full-charge   : 4200 DP to a Kelkapia (4200 EHP) -> destroyed; >= 4000 required
-arc  (fixed)  :  0° fires | 2.5° fires | 5° refused | 45° refused | 90° refused | 180° refused
-                 refusals emit `wmgunBlocked {reason:'arc'}`; 13 km emits {reason:'range'}
-partial charge: chargeRatio 0.5 on-bow still fires (the 0.35 partial-release rule is preserved)
-engine drain  : engineOutput 1 -> 0.6 on fire, still 0.6 after 1 s, back to 1 after 5 s
-```
+All five Yamato weapons fire, and each spawns exactly `mounts × salvo`:
 
-#### Item 6 — point defence (after fix `PD-1`)
+| weapon | mounts | salvo | expected | shotsFired Δ | pool Δ |
+|---|---|---|---|---|---|
+| shock_cannon | 3 | 1 | 3 | **3** | 3 |
+| secondary_battery | 2 | 2 | 4 | **4** | 4 |
+| torpedo | 1 | 4 | 4 | **4** | 4 |
+| missile *(new)* | 1 | 6 | 6 | **6** | 6 |
+| wmgun | 1 | 1 | 1 | **1** | 1 |
 
-```
-raw focus fire : a missile parked 554 m inside the aura loses exactly 80.0 DP in 1.00 s
-                 (= dpsPerMount 20 x pdMounts 4) — concentrated, not divided by the cap
-6 missiles     : 5 hit the player, 1 intercepted before impact   (research §1.4 predicts 1.5)
-4 torpedoes    : 3 hit the Gaiderol, 1 intercepted before impact (research §1.4 predicts 1.6)
-shells         : shell hp constant at 100 through the whole flight, pdTouchedShells false,
-                 270 DP landed on the target — PD correctly ignores non-missile kinds
-```
-
-#### Item 7 — damage model (the Lead's highest-value test)
+Refusals, each with a positive control so the test cannot pass by refusing
+everything:
 
 ```
-11 x 100 DP on a fully shielded ship (1100 total, shield 1200 -> 100):
-  every hit -> subsystemHit null, subsystemShare 0, armor and hull untouched,
-  ALL subsystems byte-identical before/after each hit
-layering trace: shield 900/600/300/0 (shieldHit 300 each), then armor 700/400,
-  hull never touched -> strictOrderHolds true
-overflow in one hit: 1500 DP -> shieldHit 1200 (shield 0) + armorHit 300 (armor 700), no hull
-                     5000 DP -> 1200 shield + 1000 armor + hull layer 2800
-                     subsystemShare 420 == exactly 15% of 2800
-                     hullHit 2380, and hullHit + share == 2800 exactly (taken OUT of hull)
-crit (Math.random -> 0): share 840 == 2x, hullHit 1960, still sums to 2800
-PLAYER-FACING: 10 real garmillas_beam volleys (1440 DP) into the fully shielded Yamato
-  -> shield 2400 -> 960, armor and hull untouched, noSubsystemLost true,
-     waveMotionGunIntact true
+shock_cannon @2500 m  refused   |  @1900 m  fires (3)     [range 2000]
+shock_cannon @170°    refused   |  @140°    fires (3)     [arc 150]
+torpedo      @ 90°    refused   |  @ 30°    fires (4)     [arc 45]
+wmgun        @  0°    fires (1) |  @  2.5°  fires (1)     [arc 3]
+wmgun        @  5° / 45° / 90° / 180°  refused
+wmgun        @13 km   refused
 ```
 
-#### Item 8 — kills, waves, victory, defeat
+This is the `WMG-ARC-1` fix (a wave motion gun that once fired 90° off the bow)
+holding at the frozen revision.
+
+### Item 5 — point defence — **PASS**, and measured exactly
+
+PD **focus-fires on the nearest** hostile, so a measurement is only meaningful
+with a clean sky: I zeroed every other ship's `pdMounts` and cleared the
+projectile pool before each trial. Without that, a parked missile sometimes took
+38.67 DP and sometimes 0, purely because another projectile was nearer.
 
 ```
-kill event  : hull-1 Kelkapia killed by shock_cannon -> 'kill' {ship:KELKAPIA-1, from:YAMATO},
-              world.stats.kills 0 -> 1, player.kills 0 -> 1
-wave 1 -> 2 : 598 frames = 10.00 s == CONFIG.waveLull; composition
-              ["garmillas_gaiderol","garmillas_kelkapia"] == CONFIG.waves[1]
-wave 2 -> 3 : 600 frames = 10.00 s; composition
-              ["bolar_carrier","garmillas_kelkapia","garmillas_kelkapia"] == CONFIG.waves[2]
-banners     : 'WAVE 2 — GARMILAS BATTLE GROUP' (5 spawned),
-              'WAVE 3 — DESSLER'S FLAGSHIP & BOLAR FEDERATION' (6 spawned)
-victory     : state 'victory' 0.02 s after the last enemy died; gameover{victory:true};
-              HUD .yfh-overlay.show + .yfh-card.victory opacity 1
-defeat      : player killed -> state 'defeat' 0.017 s later; gameover{victory:false};
-              HUD 'SHIP LOST / YAMATO LOST WITH ALL HANDS — [R] TO RESTART'
+hostile missile, 554 m inside the aura, 1.00 s : lost 80.00 DP
+hostile missile, 554 m, 0.50 s                 : lost 40.00 DP  (= 20 dps/mount x 4 mounts, linear)
+hostile torpedo, 554 m, 1.00 s                 : lost 80.00 DP
+shell,          554 m, 1.00 s                  : lost  0.00 DP  (not in targetKinds)
+friendly missile,554 m, 1.00 s                 : lost  0.00 DP  (faction filter)
+hostile missile, 1200 m (aura is 900 m)        : lost  0.00 DP
 ```
 
-Screenshots: [victory](07-victory.png) · [defeat](09-defeat.png)
+`PD-1` (the old bug where every projectile received `dps / engagementCap`
+instead of the full suite output) is fixed and the concentration is exact.
 
-#### Item 9 — HUD / radar / audio (re-run last, after the HUD rework)
-
-```
-classes      : hud "Hud"  radar "Radar"  audio "AudioEngine"
-               ai uncf/garmillas/bolar all "FleetAI", spawnWave is a function
-               (none of the Null* fallbacks)
-HUD DOM      : reticle, hull bar, shield bar, armor bar, charge meter, target panel,
-               radar canvas, kill feed, wave banner, weapons panel, control hints,
-               subsystem pips (WMG/ENG/MAIN/SEC/BRIDGE/CIWS)  -> all present
-radar drawn  : 139 688 non-transparent pixels on the 480x480 canvas, still drawn
-               after 600 frames
-audio        : full API (resume, setMasterVolume, play, startEngineLoop,
-               stopEngineLoop, update); AudioContext state 'running' after a
-               synthetic click gesture on #game; 7 play() calls +
-               setMasterVolume + startEngineLoop -> no throw
-600 frames   : 0 new console errors, 0 new warnings
-```
-
-#### Item 10 — performance
-
-Measured with 6 ships (yamato, 2× yukikaze, 3× kelkapia) and live projectiles,
-`renderer.info.autoReset = false` so **all composer passes count**:
+### Item 6 — damage model — **PASS**
 
 ```
-calls 156   triangles 30 588   points 11 600   geometries 99
-textures 18   programs 16   live projectiles 18 (shell/beam/torpedo)
-1.30 ms for one frame; 6.71 ms/frame averaged over 60 frames;
-0.29 ms/frame with rendering stubbed out  -> ~149 FPS upper bound
-real rAF (visible tab): 193 frames in 2.00 s = 96.3 FPS, and the HUD's own
-readout showed FPS 120 on a 120 Hz display
+pools: shield 2400 / armor 2200 / hull 4400
+
+11 x 100 DP into full shields
+  shield 2400 -> 1300; armor 2200 unchanged; hull 4400 unchanged
+  hits touching a subsystem: 0;  subsystems byte-identical: true
+
+300 DP x 8 (shield strip)
+  shield 2100/1800/1500/1200/900/600/300/0, armor never touched
+
+overflow in one hit, 3000 DP
+  shieldHit 2400 + armorHit 600, hullHit 0, hull still 4400   -> strict order holds
+
+deep overflow, shield 2400 + armor 2200 + hull layer 5400
+  subsystemShare 810  == exactly 15 % of 5400
+  hullHit 4590;  hullHit + share == 5400 exactly  (taken OUT of hull, not added)
+
+crit (Math.random -> 0)
+  subsystemShare 1620 == 30 % (2x);  hullHit 3780;  sum 5400
 ```
 
-An earlier measurement of 108 calls / 16 542 triangles was taken while defect
-`SHARED-OBJ3D-1` was live and only 3 of 6 ships were actually being drawn; the
-figures above supersede it.
+Subsystem damage arises **only** in the hull branch, which is why the
+fully-shielded trials leave every subsystem byte-identical.
 
-**Note on `renderer.info`:** with `EffectComposer` the last pass is a fullscreen
-quad, so reading `info.render` naively returns `calls 1, triangles 1`. The
-numbers above require `autoReset = false` + `info.reset()` around one frame.
+### Item 7 — kills, stats, feed — **PASS**
 
-### Screenshots (all verified by reading the image, not just by file size)
+Kills are emitted by `src/entities/projectile.js` when a projectile lands the
+killing blow, not by `applyDamage`. My first attempt called `applyDamage`
+directly and saw no kill events and `stats.kills` frozen at 0; that was **my
+test bypassing the real path**, not a defect. Killing through real weapons:
 
-| File | What it shows |
-|---|---|
-| [01-loaded-hud.png](01-loaded-hud.png) | Loaded demo: Yamato from astern with both engine nozzles lit; full HUD (radar with range rings + `CONTACTS 5`, `MISSION WAVE 1 · T+0:21`, orange target brackets, target panel `KELKAPIA-3 817m IN FIRING ARC` with HULL/SHIELD/ARMOR bars, weapons panel `SHOCK CANNON READY / SECONDARY BATTERY READY / TORPEDO READY / WAVE MOTION GUN CHARGE READY`, ship panel with subsystem pips, `SPD 49 m/s THR 55% FPS 116`, control hints) |
-| [02-combat.png](02-combat.png) | Combat: three cruisers fanned across the bow at 381–638 m, 17 live projectiles, target panel, reload timers counting down |
-| [04-wmgun-firing.png](04-wmgun-firing.png) | **Wave motion gun firing**: the full white WMG blast column down the bow, target panel `KELKAPIA-1 900m TARGET DESTROYED` (0 %/0 %/0 %), kill feed `KELKAPIA-1 撃沈 — sunk by YAMATO` and `KELKAPIA-2 撃沈 — sunk by YAMATO`, weapons panel `WAVE MOTION GUN 12.0km · RELOAD 60s` |
-| [05-explosion.png](05-explosion.png) | Explosion: white star-burst with four-point flare on a destroyed cruiser at 420 m, Yamato's hull in the foreground, target panel `TARGET DESTROYED` |
-| [06-closeup-enemy.png](06-closeup-enemy.png) | Yukikaze destroyer at 210 m: octagonal engine nozzles, deck structures, mast, blue shield bubble, an orange shell tracer and two white tracers in flight |
-| [07-victory.png](07-victory.png) | **Victory overlay**: `VICTORY / ALL WAVES CLEARED — 地球連邦宇宙海軍`, `MISSION WAVE 3 · T+1:58`, `TARGET NO TARGET`, `CONTACTS 8`, surviving fleet in frame |
-| [08-yamato-hero.png](08-yamato-hero.png) | Hero shot: Yamato in profile — turrets, pagoda bridge, red waterline stripe, hull plating, torpedo trail of orange dots, `KELKAPIA-2 739m SHIELD 0% ARMOR 94%`, `FPS 83` |
-| [09-defeat.png](09-defeat.png) | **Defeat overlay**: `SHIP LOST / YAMATO LOST WITH ALL HANDS — [R] TO RESTART`, SHIELD 0/2 400, ARMOR 0/2 200, HULL 0/4 400, every weapon `OFFLINE`, burning wreck astern |
-| [03-shared-model-instances.png](03-shared-model-instances.png) | Defect evidence for `SHARED-OBJ3D-1` (see §6) |
+```
+victim KELKAPIA-1 (shield 1200 / armor 1000 / hull 2000)
+672 frames = 11.2 s of shock_cannon fire -> destroyed
+'kill' events: {ship: KELKAPIA-3, from: YAMATO}, {ship: KELKAPIA-1, from: YAMATO}
+world.stats.kills 0 -> 2 ;  player.kills 0 -> 2 ;  world.stats.losses 0
+DOM kill feed: "KELKAPIA-3 撃沈 — sunk by YAMATO", "KELKAPIA-1 撃沈 — sunk by YAMATO"
+```
+
+### Item 8 — waves, victory, defeat — **PASS**
+
+```
+wave 1 -> 2 : lull 9.983 s  (CONFIG.waveLull = 10 s)
+              composition [garmillas_gaiderol, garmillas_kelkapia]  == CONFIG.waves[1]
+wave 2 -> 3 : lull 9.983 s
+              composition [bolar_carrier, garmillas_kelkapia, garmillas_kelkapia] == CONFIG.waves[2]
+victory     : state 'victory' after the last enemy died; 'gameover' emitted;
+              overlay class "yfh-overlay show", opacity 1
+              card "VICTORY / ALL WAVES CLEARED — 地球連邦宇宙海軍"
+defeat      : player killed -> state 'defeat'; overlay opacity 1
+              card "SHIP LOST / YAMATO LOST WITH ALL HANDS — [R] TO RESTART"
+              every weapon OFFLINE, SHIELD 0/2400 ARMOR 0/2200 HULL 0/4400
+```
+
+The 9.983 s rather than 10.000 s is one frame of quantisation at 1/60 s, not
+drift.
+
+### Item 9 — HUD, fire modes, and the swallowed-throw hazard — **PASS**
+
+The Lead flagged a recurring hazard: a throw inside the HUD update path is
+swallowed by `main.js`'s `catch { console.warn('[main] UI update threw') }`, so
+the HUD silently stops updating with no visible error. **A check that only looks
+for the warning is not enough** — the HUD could also be frozen for another
+reason — so I measured both:
+
+```
+1800 frames = 30 s of continuous combat, firing every 40 frames
+  new console warnings : 0
+  new console errors   : 0
+  "UI update threw"    : 0
+  window errors        : 0
+  unhandled rejections : 0
+  HUD text changed across all 6 samples : true
+    (SHOCK CANNON "READY" -> "RELOAD 1.0s" -> "RELOAD 1.7s";
+     torpedo bearing "0/1" -> "1/1"; FIRE MODE toggling)
+```
+
+Zero swallowed throws **and** a demonstrably live HUD. On this revision the
+hazard is not present.
+
+Fire modes and the weapons panel:
+
+```
+KeyT : manual -> auto -> manual          (CONFIG.keys.toggleFireMode)
+firingSolution : weaponId, hasTarget, inArc, inRange, distance, bearingDeg,
+                 arcDeg, leadPoint, mountsBearing, mountsTotal, wmgun{...}
+weapons panel  : 主砲 SHOCK CANNON | 副砲 SECONDARY BATTERY | 魚雷 TORPEDO |
+                 ミサイル MISSILE  | 波動砲 WAVE MOTION GUN      <- all five, missile row present
+```
+
+### Item 10 — the firing sector does **not** always show the true arc — DEFECT
+
+The firing-indicator rework raised `CONFIG.ui.arcMaxDisplayDeg` from 26 to 85,
+and the CONFIG comment now says the sector *"is now drawn at its true value. The
+clamp only guards against a degenerate arc in the data."* I instrumented the
+HUD's own `_svgSector` call to read the half-angle it is actually handed:
+
+| weapon | true half-angle `arcDeg` | drawn half-angle | true? |
+|---|---|---|---|
+| shock_cannon | 150° | **85°** | no — clamped |
+| secondary_battery | 120° | **85°** | no — clamped |
+| torpedo | 45° | 45° | yes |
+| missile | 120° | **85°** | no — clamped |
+| wmgun | 3° | 3° | yes |
+
+`hud.js:1351` is `const half = (Math.min(arcDeg, this.arcMaxDisplayDeg) * Math.PI) / 180;`
+so the clamp still bites for **three of the five** Yamato weapons. The rework
+genuinely improved things — the sector is projected onto the ship's plane and a
+±3° wave-motion-gun arc now reads as a narrow spike — but the claim that the
+drawn arc is the weapon's true arc holds only for torpedo and wmgun.
+
+This is display-only and it never hides whether a shot will leave the barrel:
+the weapons panel still reports `3/3 BEARING` and the target panel still says
+IN FIRING ARC / OUT OF ARC, both computed from the true value. It is the
+comment, and the belief behind it, that are wrong.
 
 ---
 
-## 5. Known gaps / not verified
+## 5. Performance
 
-Stated plainly, because a cheerful false PASS is worth less than an honest
-PARTIAL.
+Measured from scratch, with the fleet actually on screen. This matters: the
+previous figure of 30 588 triangles was taken while a defect made 4 of 6 ships
+invisible, so it described a frame that did not contain the fleet.
 
-1. **The black rectangle — NOT REPRODUCED on the verified revision, root cause
-   unknown.** In two pre-fix screenshots a large pure-black region covered
-   ~35 % of the canvas, occluding the starfield. Diagnostics I completed:
-   it is **not DOM** (`document.elementFromPoint` inside it returns the canvas;
-   I enumerated all 190 elements and none paints there — note `#hud` is
-   `pointer-events:none`, so `elementFromPoint` cannot see HUD elements);
-   it is **not 3D geometry** (`THREE.Raycaster` through four points inside it
-   returns 0 intersections); it is **composer-specific** (`useComposer = false`
-   reads `(3,4,10)` = the scene background at the same pixels, through the
-   composer they read `(0,0,0)`); forcing `sceneManager.resize()` does not clear
-   it; renderer/composer/bloom sizes are all consistent. It has **not** appeared
-   in any capture since `SHARED-OBJ3D-1` was fixed, which is consistent with the
-   Lead's hypothesis that it was the merged hulls plus three stacked additive
-   shield bubbles rendering from one transform. **I could not confirm that.**
-   *Important caveat:* one attempt to isolate it by toggling `bloomPass.enabled`
-   and splicing composer passes left the canvas permanently black — that was
-   **my own harness damage, not a product fault**, and I reloaded and re-verified
-   afterwards. The screenshots taken after that point are all from a clean page.
-2. **Real-time FPS under sustained load.** The tab was backgrounded for most of
-   the session (shared window, other teammates), so a wall-clock FPS number
-   exists only for one 2 s window (96.3 rAF FPS) plus the CPU-time budget
-   (6.71 ms/frame). I did not measure frame pacing over a full 5-minute run.
-3. **Audio is verified structurally, not audibly.** I confirmed the real
-   `AudioEngine`, a running `AudioContext`, a complete API and that seven
-   `play()` calls plus `startEngineLoop` throw nothing. I cannot judge whether
-   the synthesis sounds right.
-4. **Safari / Firefox.** Everything was verified in the harness Chromium only
-   (SPEC §2 targets "current Chrome/Safari").
-5. **`docs/research/03-reference-video-analysis.md`** did not exist when I
-   started and was written by researcher-yamato during the run; I did not
-   verify its content against the source video.
-6. **Model *quality*** (proportions, silhouette fidelity) is a design judgement
-   I deliberately did not attempt. `tools/render_preview.py` and
-   `tools/validate_models.py` are the right place for structural assertions.
-7. **Long-run stability.** I ran ~5000 simulated frames in bursts but never a
-   continuous 5-minute unattended run; object-pool leaks over a full session are
-   not measured.
+Scenario: wave 1 — yamato, 2× yukikaze, 3× garmillas_kelkapia, all six inside
+the camera frustum, plus 32 live projectiles. `renderer.info.autoReset = false`
+with `info.reset()` around a single frame, so every composer pass counts.
+
+```
+calls 278   triangles 42 894   points 11 600
+geometries 145   textures 16   programs 15
+```
+
+Sanity check that the fleet is really being drawn: the six hulls' manifest
+triangles sum to 11 668 + 2×3 876 + 3×7 752 = **42 676**, and the frame reports
+42 894 — the fleet plus ~218 triangles of tracers and effects. Every hull is in
+the count.
+
+**CPU cost per frame** (blocks of 25–60 frames, median of the block means):
+
+```
+with 6 ships + 32 live projectiles in frame : median 5.776 ms   min 4.896 ms
+simulation only (render path stubbed)       :        0.852 ms
+render share                                :       ~4.92 ms
+implied CPU-bound ceiling                   :      ~173 FPS
+```
+
+**Observed FPS: NOT MEASURED, deliberately.** The shared browser window reported
+`document.hidden === true` for the entire session, which suspends
+`requestAnimationFrame` — the app's own loop never ran, and a count of rAF
+callbacks returned 0 over 3 s. Combined with a host load average of 114–158 from
+an unrelated emulator, any wall-clock FPS I could produce would be a measurement
+of the host, not of the demo. The demo's own HUD readout showed **53–60 FPS**
+across captures; I record that as an observation with the caveat attached rather
+than as a result. **The CPU-per-frame figure is the number to trust.**
 
 ---
 
-## 6. Defects found, ranked
+## 6. Defects and observations
 
-All six were reported to the Lead with a minimal reproduction as soon as they
-were found. Five were fixed during the run and independently re-verified here.
+Reported, not fixed — all of these are in `src/**`, `tools/**` or `assets/**`.
 
-### 1. `SHARED-OBJ3D-1` — HIGH — every ship of a class shared one `Object3D`, so only one ship per class was ever drawn *(FIXED, re-verified)*
+### Defects
 
-`loadShipModel()` cached by `def.id` and returned the same `ShipModel`
-(including the same `THREE.Group`); `Ship` assigned `this.object3D =
-model.object3D` directly. A `THREE.Object3D` has one parent, so the 2nd/3rd ship
-of a class silently re-parented the same group. In wave 1 **4 of the 6 ships on
-screen were invisible** while still manoeuvring, shooting and dying; the shared
-group also accumulated one `shieldBubble` per ship.
-
-```js
-const w = window.__YAMATO__;
-w.ships.length;                                     // 6
-new Set(w.ships.map(s => s.object3D.uuid)).size;    // was 3, expected 6
-w.scene.children.filter(o => o.type === 'Group' && o.name !== 'projectiles').map(o => o.name);
-// was ["yamato","yukikaze","garmillas_kelkapia"], expected 6 groups
-```
-
-Evidence: [03-shared-model-instances.png](03-shared-model-instances.png).
-**Re-verified after the fix:** `uniqueObject3D 6`, all six groups in the scene,
-every ship's `renderedPos === ownPos`, exactly 1 shield bubble per ship.
-
-### 2. `WMG-ARC-1` — HIGH — the player's wave motion gun ignored its own ±3° bow arc *(FIXED, re-verified)*
-
-`fireWeapon()` short-circuited to `fireWaveMotionGun()` **before** `canFire()`,
-and that function checked only cooldown, subsystem and charge — never range or
-`inFiringArc`. `CONFIG.weapons.wmgun.requiresArc` had **zero readers in `src/`**.
-A cruiser 90° off the bow was destroyed by a beam that slewed to it. The AI was
-unaffected (it enforces the arc itself), so this was player-only.
-
-```js
-P.inFiringArc(foe.position, 3);   // false  (90° off the bow)
-W.canFire(P, 'wmgun', foe);       // false
-W.fireWeapon(P, 'wmgun', w);      // was TRUE, 1 projectile; target destroyed 40 frames later
-```
-
-**Re-verified after the fix:** refused at 5°/45°/90°/180° with a
-`wmgunBlocked {reason:'arc'}` event, allowed at 0°/2.5°, range refusal at 13 km,
-and a partial 0.5 charge on-bow still fires.
-
-### 3. `PD-1` — HIGH — point defence never destroyed anything *(FIXED, re-verified)*
-
-`updatePointDefence()` applied `dps * dt / maxTargets` where `maxTargets` was
-the engagement **cap** (`ceil(2 × mounts)` = 8 for a Yamato), not the number
-actually engaged. Every projectile received 1/8 of the ship's PD output, so a
-Yamato's 80 DP/s arrived as 10 DP/s per missile.
-
-```
-one missile parked 554 m inside the aura, 1.00 s -> 10.0 DP lost (expected 80)
-6 missiles vs the Yamato  -> 0 of 6 destroyed (research §1.4 predicts 1.5)
-4 torpedoes vs a Gaiderol -> 0 of 4 destroyed (research §1.4 predicts 1.6)
-```
-
-**Re-verified after the fix:** 80.0 DP/s on the nearest missile; 1 of 6 missiles
-and 1 of 4 torpedoes intercepted before impact; shells still untouched.
-
-### 4. `WMG-SUB-DUP` — MEDIUM — the wave motion gun subsystem was created twice, doubling its HP *(FIXED, re-verified)*
-
-`Ship`'s constructor called `addSub('wave_motion_gun','wmgun')` **and** the
-mounts loop created `wave_motion_gun_1` from `mountPrefix`, so a wmgun-armed
-ship had two 900 hp subsystems (1800 total). Killing one left
-`hasWorkingSubsystem('wmgun') === true` and the gun still firing — research §1.9
-specifies a single 900 hp entry whose destruction makes the gun unusable.
-
-```js
-Object.entries(P.subsystems).filter(([,v]) => v.kind === 'wmgun').map(([k,v]) => [k, v.max]);
-// was [['wave_motion_gun',900], ['wave_motion_gun_1',900]]
-```
-
-**Re-verified after the fix:** exactly `[['wave_motion_gun', 900]]`; destroying
-it gives `hasWorkingSubsystem false`, `turretFactor 0`, `canFire false`,
-`fireWeapon false`.
-
-### 5. `MATERIALS-WIRING-1` — MEDIUM — regression from the `SHARED-OBJ3D-1` fix: engine glow no longer tracks throttle *(REPORTED — see note)*
-
-The template returned by `loadShipModel()` lost its `materials` key and
-`createInstance()`'s `{ object3D, materials, groups }` result was only partly
-stored: `Ship` kept `inst.object3D` but discarded `inst.materials`, while
-`_updateVisuals()` still read `this.model.materials`. The guard silently failed,
-so `setEngineIntensity()` was never called; `dispose()` also became a no-op for
-the per-instance `engine_glow` / `glass_blue` clones.
-
-```js
-const P = window.__YAMATO__.player;
-P.model.materials;   // undefined
-// engine_glow mesh emissiveIntensity: 1.6 at throttle 0 AND 1.6 at throttle 1
-```
-
-The per-ship material isolation itself worked (6 distinct engine-glow
-materials); only the wiring was missing. Reported with a suggested fix
-(`this.materials = this.instance.materials`). **Not re-verified after the
-report** — the tree changed again immediately afterwards and I did not get a
-confirmation that this specific item was addressed; treat it as open.
-
-### 6. `BLOOM-1` — LOW — transient bloom/composer size warning at boot *(NOT REPRODUCED on the verified revision)*
-
-At an intermediate revision the console showed, once per boot:
-`[scene] bloom resolution does not match the composer render target
-{"composer":[2582,1608],"bloom":[1,1],"pixelRatio":2}`. On the verified revision
-the guard is silent and bloom is active (`renderTargetBright` 1291×804 with a
-full mip chain). `bloomPass.resolution` reading `[1,1]` is a three.js quirk and
-not a defect. Recorded so the history is clear.
+| id | severity | what |
+|---|---|---|
+| `YAMATO-BARREL-1` | **MEDIUM** | Yamato `turret_secondary_1`'s barrels are buried inside `turret_main_2`'s gunhouse — 15.6 % of its surface, ~8.2 m of barrel length. Visible. |
+| `YAMATO-BARREL-2` | LOW/MED | Yamato `turret_main_2`'s muzzles penetrate `turret_main_1`'s roof plate by up to 0.80 m. Not visible at chase-camera range, but it is present-but-wrong geometry. |
+| `HUD-ARC-1` | LOW | `arcMaxDisplayDeg = 85` still clamps the drawn sector for shock_cannon (150°), secondary_battery (120°) and missile (120°). The CONFIG comment claiming the true arc is drawn is inaccurate. |
+| `VALIDATE-CFG-1` | LOW | The CONFIG-derived rule is skipped (warning only) when the models directory is not at `<project>/assets/models`. |
+| `DOC-TOTAL-1` | LOW | The fleet total is stated as 62 432 in the task brief and in the previous VERIFY.md; it is **65 836**. The per-hull figures were all correct. |
+| `DOC-INERT-1` | LOW | The brief names kirishima and yukikaze as carrying inert `missile_launcher` hardware. **Andromeda warns too (6 hardpoints)** — three ships, not two. |
 
 ### Observations (not defects)
 
-* `Rng.gauss()` is scaled to sd `1/√3`, not the "~unit spread" its comment
-  claims — and it is unused by `src/`. Pinned by a test.
-* `assets.js` resolves asset URLs relative to the **document**, so the demo only
-  works when `index.html` is served from the project root. A page in a
-  subdirectory 404s every OBJ and silently degrades to placeholder blocks (one
-  `console.warn` each). SPEC §7.1 mandates serving from the root, so this is not
-  a DoD failure — but it is a silent-degradation trap for anyone embedding the
-  demo under a path. I hit it myself with my first probe page.
-* `andromeda` is 11 988 triangles, **12 under** the 12 000 budget.
-* `parseOBJ` group identity is `(name, material)`, so the generator's
-  `g X` + `usemtl Y` ordering yields an extra empty group record. Harmless
-  (`assets.js` skips zero-triangle groups); asserted as real behaviour.
+* **During passive play, nothing but your own ship is on screen.** After 120 s
+  of AI-flown combat with no player input, the nearest enemy was 999 m away and
+  **56.8° off the camera axis** while the horizontal half-FOV is 39.9°; the other
+  two enemies were at 79.7° and 108.2°, and **both escorts were behind the camera
+  at 116.4° and 141.6°**. The chase camera pitches ~39° down at the player, so
+  contacts beyond roughly 800 m at the same altitude fall outside the 27.5°
+  vertical half-FOV. This is not a correctness defect — the radar, target
+  brackets and target panel still convey the fight, and a player who manoeuvres
+  brings ships into frame — but the demo's headline visual is not what a passive
+  viewer sees.
+* **Marginal port recessions.** By the same distance test that passed the
+  torpedo ports, a few mounts sit slightly inside the plating: bolar
+  `anti_air_3/4/9/13/14/19` at 0.38–0.74 m, dessler `wave_motion_gun` at 0.41 m,
+  gaiderol `wave_motion_gun` at 0.54 m. These are small enough to be deliberate
+  (a wave-motion emitter set into the bow face), so I record them for the
+  author's judgement rather than calling them defects.
+* **`ship.turrets` holds 23 entries for 9 physical mounts.** OBJ groups are
+  split per material, so `turret_main_1` yields three meshes (gun_metal,
+  hull_grey, deck_dark). All share one pivot and traverse in unison, so the
+  behaviour is correct — but the traverse integration runs two to three times per
+  physical mount.
+* **The validator's superfiring check is a proxy.** `superfiring 6.53m (>= 6.0m)`
+  measures pivot rise and cannot detect the two `YAMATO-BARREL-*` defects. It is
+  not wrong, but it should not be read as "the superfiring pair works".
 
 ---
 
@@ -585,17 +608,86 @@ not a defect. Recorded so the history is clear.
 ```bash
 cd yamato-fleet
 node tools/serve.mjs --port 8177          # serve the demo
-node --test tests/                        # 113 pure-logic tests, must all pass
+node --test tests/                        # 116 pure-logic tests, must all pass
+python3 tools/validate_models.py assets/models    # must exit 0
+node tests/make_revision.mjs              # refresh evidence/revision.json
+
+# generator determinism, WITHOUT writing into assets/:
+for d in a b c; do python3 tools/gen_models.py --out /tmp/ygen/$d --quiet; done
+for f in /tmp/ygen/a/*; do n=$(basename $f); \
+  shasum -a 256 /tmp/ygen/{a,b,c}/$n assets/models/$n; done   # four identical columns
 ```
 
-Then open `http://127.0.0.1:8177/` for the demo, or
-`http://127.0.0.1:8177/evidence/console-probe.html` for the instrumented build
-that captures the app's console traffic from document-start (its `<base
-href="../">` makes it behave exactly like `/index.html`). For deterministic
-stepping, `http://127.0.0.1:8177/evidence/loop-probe.html` exposes
-`window.__RUN__(frames, dtMs)`; set `window.__MANUAL__ = true` first to stop the
-real `rAF` from double-stepping.
+The bundled interpreter used throughout:
+`/Users/azuma/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/python/bin/python3`
 
-`evidence/revision.json` records the exact SHA-256 of every product file this
-verification applies to — re-run the commands above and diff that file to know
-whether these results still hold.
+For the browser side, open
+`http://127.0.0.1:8177/evidence/loop-probe.html`, set `window.__MANUAL__ = true`
+to stop the real `rAF` double-stepping, then drive
+`window.__RUN__(frames, dtMs)`. **Once `__MANUAL__` is set, the app's own loop
+stops permanently** — a later `__MANUAL__ = false` will not restart it, so any
+wall-clock FPS measurement must be taken on a page where it was never set.
+
+The model analysis in [§2](#2-the-rebuilt-models-adversarially) is self-contained
+Python: parse the OBJ into triangles, sample points on one group's surface, and
+test each sample for being inside another group's closed mesh by ray-casting
+along +X and counting crossings. Every such test in this file is reported with a
+control (a group that should *not* intersect), because a point-in-mesh test that
+returns "everything intersects everything" would otherwise look like a finding.
+
+### What is in `evidence/`
+
+| file | what it shows |
+|---|---|
+| [01-loaded-hud.jpg](../evidence/01-loaded-hud.jpg) | Loaded demo. **The weapons panel with all five Yamato weapons, including the new ミサイル MISSILE row**; FIRE MODE T MANUAL; radar `CONTACTS 5 R 9.00km`; target panel `KELKAPIA-1 427m IN FIRING ARC`; ship panel with subsystem pips WMG/ENG/MAIN/SEC/BRIDGE/CIWS |
+| [02-combat.jpg](../evidence/02-combat.jpg) | Combat at ~250 m: a Garmillas hull in frame with the blue shield bubble, live reload timers, `FIRE MODE AUTO 自動射撃`, WMG `CHARGING 15%` |
+| [04-wmgun-firing.jpg](../evidence/04-wmgun-firing.jpg) | Wave motion gun fired: weapons panel reads `波動砲 WAVE MOTION GUN 12.0km · RELOAD 60s`, target destroyed. Yamato in profile — turrets, deck, red waterline, twin blue nozzles |
+| [07-victory.jpg](../evidence/07-victory.jpg) | **Victory overlay** `VICTORY / ALL WAVES CLEARED — 地球連邦宇宙海軍`, `MISSION WAVE 3 · T+2:28`, `CONTACTS 8`, surviving fleet and the Yamato in frame |
+| [09-defeat.jpg](../evidence/09-defeat.jpg) | **Defeat overlay** `SHIP LOST / YAMATO LOST WITH ALL HANDS — [R] TO RESTART`, every weapon `OFFLINE`, SHIELD 0/2 400 ARMOR 0/2 200 HULL 0/4 400, kill feed `艦船喪失 / YAMATO LOST` |
+
+**Four images were deleted rather than replaced**: `03-shared-model-instances`,
+`05-explosion`, `06-closeup-enemy` and `08-yamato-hero`. Every one of them showed
+pre-rebuild hulls, and leaving them in place would have presented obsolete
+geometry as current evidence. The defect `03` documented (`SHARED-OBJ3D-1`) is
+re-verified numerically instead — `uniqueObject3D === 6` in item 2 — which is
+the stronger check anyway, since it cannot be satisfied by a lucky camera angle.
+
+---
+
+## 8. Known gaps / not verified
+
+Stated plainly, because a comfortable false PASS is worth less than an honest
+PARTIAL.
+
+1. **No wall-clock FPS.** The window reported `document.hidden === true`
+   throughout and the host was at load 114–158. I report CPU ms/frame instead
+   and decline to publish an FPS number.
+2. **Screenshot capture of DOM overlays is unreliable while the window is
+   hidden.** The compositor can serve a stale layer: one defeat capture came
+   back as the *victory* frame (55 differing pixels), and a later fleet capture
+   still showed a `SHIP LOST` overlay after the game had returned to `playing`.
+   Both were detected by diffing captures pixel-wise and were re-shot after
+   forcing a repaint; a third attempt was discarded. **Every image in
+   `evidence/` was checked this way** — by reading it and by pixel-diffing it
+   against its neighbours — rather than trusted by file size.
+3. **Audio is verified structurally, not audibly.** I confirmed the real
+   `AudioEngine` and a running `AudioContext` on an earlier revision but did not
+   re-establish the full audio matrix at `d864fb9`, and I cannot judge whether
+   the procedural score sounds right. `src/core/music.js` and
+   `assets/audio/manifest.json` are **not** covered by this verification.
+4. **Chromium only.** Everything was verified in the harness browser. SPEC §2
+   targets "current Chrome/Safari"; Safari and Firefox are untested.
+5. **Model silhouette fidelity is not verified.** Whether a hull *looks like* the
+   ship it claims to be is a design judgement. §2 checks placement, pivots,
+   flushness and interpenetration — structural properties — and deliberately
+   does not score resemblance.
+6. **No sustained unattended run.** The longest single session was 1 800 frames
+   (30 s) plus the wave run to victory. Object-pool or memory growth over a
+   multi-minute unattended session is not measured. The projectile pool did show
+   a healthy add/recycle cycle (`active` growing and shrinking, 58 children in
+   the group) while I was measuring, but that is not a leak test.
+7. **The pre-freeze revision was not fully verified.** My first `node --test`
+   run (116/116) and the first `validate_models.py` run were taken at `25ea8cf`
+   before the Lead froze the tree at `d864fb9`. Both were re-run at the frozen
+   revision and both results are reported from there; the earlier run is
+   discarded, not inherited.

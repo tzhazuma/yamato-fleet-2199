@@ -284,10 +284,22 @@ INERT_FAMILIES = ("turret_secondary", "torpedo_tube", "missile_launcher")
 
 
 def config_mix(root):
-    """The required hardpoint mix per ship, or (None, reason) if unavailable."""
-    cfg = os.path.abspath(os.path.join(root, os.pardir, os.pardir, "src", "core",
-                                       "config.js"))
-    if not os.path.isfile(cfg):
+    """The required hardpoint mix per ship, or (None, reason) if unavailable.
+
+    Resolved relative to THIS SCRIPT first, and only then relative to the models
+    directory. The models-relative path only works when the directory being
+    validated is exactly ``<project>/assets/models`` — so pointing the validator
+    at a copy (which is precisely what a reviewer does when checking whether the
+    rule can fail) silently skipped the whole CONFIG-derived check. Reported by
+    verifier-2 as VALIDATE-CFG-1.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(here, os.pardir, "src", "core", "config.js"),
+        os.path.join(root, os.pardir, os.pardir, "src", "core", "config.js"),
+    ]
+    cfg = next((os.path.abspath(c) for c in candidates if os.path.isfile(c)), None)
+    if cfg is None:
         return None, "src/core/config.js not found"
     script = CONFIG_MIX_JS % cfg.replace("\\", "/")
     try:

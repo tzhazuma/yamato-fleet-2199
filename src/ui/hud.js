@@ -1359,10 +1359,19 @@ export class Hud {
     const inArc = (sol && typeof sol.inArc === 'boolean') ? sol.inArc : this._inArc(player, target);
     const inRange = (sol && typeof sol.inRange === 'boolean') ? sol.inRange : true;
 
-    // The sector is drawn at the weapon's TRUE arc, on the ship's plane. The old
-    // screen-space fan had to be clamped (CONFIG.ui.arcMaxDisplayDeg) because a
-    // 150 deg fan from a point covers the viewport; projected onto the plane it
-    // does not, so the clamp is no longer needed for the fill.
+    // The sector is projected onto the ship's PLANE, which is the real fix: the
+    // old screen-space fan read as a flat wash, whereas a plane projection reads
+    // as a pie slice around the hull.
+    //
+    // The clamp STILL BITES, and the earlier comment here claiming otherwise was
+    // wrong (caught by verifier-2 as HUD-ARC-1). `arcDeg` is a HALF-angle — see
+    // Ship.inFiringArc, which compares acos(dot) against it directly — so the
+    // shock cannon's 150 is a 300 deg arc, i.e. nearly all-round, and drawing
+    // that conveys nothing. Measured at the time of the fix: shock 150,
+    // secondary 120 and missile 120 all draw at the cap; torpedo 45 and wmgun 3
+    // draw true. The true value is always reported numerically in the weapons
+    // panel and the target panel, so the clamp never hides whether a shot will
+    // leave the barrel — it only stops the fill from becoming a full disc.
     const sector = this._svgSector(
       this.el.arcWedge, player.position, fwd, up, dist, half, world.camera, size);
     if (!sector) {

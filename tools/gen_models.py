@@ -2558,7 +2558,14 @@ def build_yamato(s):
     #   then the tower.
     z1, z2 = -124.0, -94.0
     d1, d2 = dy(z1), dy(z2)
-    fwd_roof = d2 + 7.5
+    #   +10.5, not +7.5. The 6.53 m pivot rise cleared #1's gun house at the
+    #   barrel AXIS (32.88 vs a 31.14 roof, a 1.74 m margin) but the barrels are
+    #   2.97 m-radius cylinders, so their undersides dipped to 29.91 and passed
+    #   through the roof by up to 1.23 m (0.75 m still at +9.0). A pivot-rise
+    #   proxy cannot see any of that:
+    #   the stations were spaced by gun-house pivot and the barrel overhang was
+    #   never accounted for. Reported by verifier-2 (YAMATO-BARREL-2).
+    fwd_roof = d2 + 10.5
     s.add(frustum_box(42.0, 7.5, 46.0, center=(0.0, d2 + 3.75, z2),
                       scale_top=(0.90, 0.93), mat="hull_grey",
                       group="superstructure"))
@@ -2583,8 +2590,17 @@ def build_yamato(s):
     #  side profiles put them: #1 superfiring over turret #2 on a barbette
     #  rising off the forward deckhouse (the real Yamato's 15.5 cm #3 position),
     #  #2 aft on the aft deckhouse roof, trained aft.
+    #   Barbette 14.5 m, not 10.2. She is abaft turret #2 (z -73 against -94) so
+    #   she can only superfire over it if she is HIGHER than its gun house, and
+    #   at 10.2 m she was not: her 12 m barrels reach z = -88.6, straight through
+    #   #2's house (z -108..-80, top fwd_roof + 13.67). 15.6% of her surface was
+    #   inside #2. Her barrels now sit at fwd_roof + 16.4, clearing #2's roof by
+    #   1.33 m. The barbette's 5.4 m radius keeps 1.6 m of air to #2's house
+    #   rear, so raising it does not create a new clash. (verifier-2,
+    #   YAMATO-BARREL-1 — the same root cause as #2 above: stations spaced by
+    #   pivot, barrel overhang unaccounted for.)
     mount_turret(s, "turret_secondary_1", "turret_secondary", fwd_roof, -73.0,
-                 5.4, 10.2, (11.0, 4.6, 12.0), 3, 1.0, 12.0, elev=0.10)
+                 5.4, 14.5, (11.0, 4.6, 12.0), 3, 1.0, 12.0, elev=0.10)
     s.add(frustum_box(28.0, 5.0, 26.0, center=(0.0, dy(48.0) + 2.5, 48.0),
                       scale_top=(0.9, 0.93), mat="hull_grey",
                       group="superstructure"))

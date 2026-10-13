@@ -192,7 +192,7 @@ forgotten.
 
 | Hull | Hardware | Decision |
 |---|---|---|
-| Andromeda, Kirishima, Yukikaze | 4 / 16 / 8 missile tubes | **No missile weapon.** The missile is 36 DPS per mount. On Yukikaze (1000 EHP, 24 DPS) that is a **+150%** increase and would make a destroyer hit as hard as a battlecruiser. The hardpoints exist, so issuing the weapon later is a config change, not a remodelling job. |
+| Andromeda, Kirishima, Yukikaze | 6 / 2 / 1 missile hardpoints (4 / 16 / 8 tubes) | **No missile weapon.** The missile is 36 DPS per mount. On Yukikaze (1000 EHP, 24 DPS) that is a **+150%** increase and would make a destroyer hit as hard as a battlecruiser. The hardpoints exist, so issuing the weapon later is a config change, not a remodelling job. **Three ships warn, not two** — `validate_models.py` reports all three, and an earlier note of mine named only Kirishima and Yukikaze (caught by verifier-2 as DOC-INERT-1). |
 | Yukikaze, Gaiderol, Bolar | 3 / 16 / 12 torpedo tubes | **No torpedo weapon.** The torpedo is 260 damage × 4 per mount, i.e. **86.7 DPS** — battleship-grade alpha. Issuing it to a destroyer or a carrier would distort every engagement they appear in. |
 | Yukikaze | 2 fixed bow 12.7 cm | Merged `superstructure` geometry, no hardpoints. They do not traverse, so they must not be indexed; they are also not a `secondary_battery` (29.3 DPS/mount is battleship-grade ordnance). |
 | Andromeda | 2 quad grenade projectors | Merged `missile_launcher` bucket, with a hardpoint each, so adding a weapon is all it takes to make them live. |
