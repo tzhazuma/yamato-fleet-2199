@@ -7,6 +7,31 @@
 > **Verdict: PASS on the SPEC §7 Definition of Done, with two open items that I
 > could not close** (see [§5 Known gaps / not verified](#5-known-gaps--not-verified)).
 > Six defects were found; five were fixed by their owners during the run and
+
+> ## ⚠ Scope after the armament rebuild (added by the Lead)
+>
+> `evidence/revision.json` has been regenerated against the current tree, but
+> **the verification in this file was performed against the PREVIOUS revision**,
+> before all eight ship models were rebuilt against the sourced 2199 armament
+> specification (`docs/research/05-yamato-armament-layout.md`).
+>
+> What that means for the items below:
+>
+> - **Still valid** — anything that does not depend on ship geometry: the unit
+>   suite, the provenance/asset-contract tests, the balance measurements, the
+>   wave flow, the weapon mechanics (arc gating, point defence focus fire, the
+>   wave motion gun subsystem), and the audio/HUD behaviour.
+> - **Needs re-running** — anything measured in triangles, draw calls or model
+>   structure: item 10 (performance) in particular, and any screenshot evidence
+>   showing a ship. The fleet is now 62 432 triangles across eight hulls with
+>   completely different geometry, and the renders in `evidence/` show the old
+>   models.
+> - **Superseded** — the model-shape assertions. `tools/validate_models.py` now
+>   carries a measured `LAYOUT` table per hull and exits 0, and the provenance
+>   suite is at 116/116, but those are the Lead's runs, not independent ones.
+>
+> Re-verification by someone other than the author is still outstanding. Do not
+> read this file as covering the current revision until it is re-run.
 > re-verified here, one (`BLOOM-1`) was a transient revision I re-checked as
 > clean.
 
