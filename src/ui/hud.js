@@ -442,18 +442,6 @@ function rotateVec(q, x, y, z, out) {
   return out;
 }
 
-/** Rodrigues rotation of v about a unit axis by `ang` radians. */
-function rotateAboutAxis(vx, vy, vz, ax, ay, az, ang, out) {
-  const c = Math.cos(ang), s = Math.sin(ang);
-  const dot = vx * ax + vy * ay + vz * az;
-  const cx = ay * vz - az * vy;
-  const cy = az * vx - ax * vz;
-  const cz = ax * vy - ay * vx;
-  out.x = vx * c + cx * s + ax * dot * (1 - c);
-  out.y = vy * c + cy * s + ay * dot * (1 - c);
-  out.z = vz * c + cz * s + az * dot * (1 - c);
-  return out;
-}
 
 /** Bilingual labels for the engine's fire modes (values come from CONFIG). */
 const MODE_LABEL = {
@@ -1224,6 +1212,72 @@ export class Hud {
    * Project a horizontal circle of `radius` around `centre` into screen space
    * and set it as an SVG polygon. `radius <= 0` clears the ring.
    */
+  /**
+   * In-plane basis at the ship: `f` is the ship's forward projected onto the
+   * plane perpendicular to `up`, `r` is starboard (f x up). Returns null if the
+   * forward vector is degenerate against up.
+   */
+  _planeBasis(forward, up) {
+    const ux = num(up && up.x, 0), uy = num(up && up.y, 1), uz = num(up && up.z, 0);
+    let fx = num(forward && forward.x, 0), fy = num(forward && forward.y, 0), fz = num(forward && forward.z, -1);
+    const d = fx * ux + fy * uy + fz * uz;
+    fx -= ux * d; fy -= uy * d; fz -= uz * d;             // remove the out-of-plane part
+    const fl = Math.hypot(fx, fy, fz);
+    if (!(fl > 1e-6)) return null;
+    fx /= fl; fy /= fl; fz /= fl;
+    // r = f x up
+    const rx = fy * uz - fz * uy;
+    const ry = fz * ux - fx * uz;
+    const rz = fx * uy - fy * ux;
+    const rl = Math.hypot(rx, ry, rz) || 1;
+    return { fx, fy, fz, rx: rx / rl, ry: ry / rl, rz: rz / rl };
+  }
+
+  /**
+   * A weapon's firing sector, drawn ON THE SHIP'S PLANE rather than fanned into
+   * screen space — the World of Warships torpedo-indicator idea.
+   *
+   * This matters for correctness, not just looks: a 150 deg traverse arc drawn
+   * as a screen-space fan from a point becomes a flat wash across the viewport,
+   * whereas the same arc projected onto the plane reads as a wide pie slice
+   * around the ship, which is what it actually is. A 3 deg wave-motion-gun arc
+   * becomes a narrow spike. Both are then honest.
+   *
+   * @param el      SVG polygon to fill with the sector
+   * @param centre  world-space apex (usually the ship)
+   * @param forward ship forward, world space
+   * @param up      ship up, world space
+   * @param radius  sector radius in world units
+   * @param half    half-angle in RADIANS
+   * @returns {{mid:object, left:object, right:object}|null} screen-space rim points
+   */
+  _svgSector(el, centre, forward, up, radius, half, camera, size) {
+    if (!el) return null;
+    if (!(radius > 0) || !centre || !camera) { this._attr(el, 'points', ''); return null; }
+    const B = this._planeBasis(forward, up);
+    if (!B) { this._attr(el, 'points', ''); return null; }
+    const N = 24;
+    const at = (ang) => {
+      const c = Math.cos(ang), sn = Math.sin(ang);
+      return {
+        x: centre.x + (B.fx * c + B.rx * sn) * radius,
+        y: centre.y + (B.fy * c + B.ry * sn) * radius,
+        z: centre.z + (B.fz * c + B.rz * sn) * radius,
+      };
+    };
+    const pts = [];
+    for (let i = 0; i <= N; i++) pts.push(at(-half + (2 * half * i) / N));
+    const rim = pts.map((w) => this._project(w, camera, size.w, size.h));
+    const apex = this._project(centre, camera, size.w, size.h);
+    if (!apex || apex.behind || rim.some((q) => !q || q.behind)) {
+      this._attr(el, 'points', '');
+      return null;
+    }
+    this._attr(el, 'points',
+      [apex, ...rim].map((q) => q.x.toFixed(1) + ',' + q.y.toFixed(1)).join(' '));
+    return { mid: rim[Math.floor(N / 2)], left: rim[0], right: rim[N], apex };
+  }
+
   _svgRing(el, centre, up, radius, camera, size) {
     if (!el) return;
     if (!(radius > 0) || !centre || !camera) { this._attr(el, 'points', ''); return; }
@@ -1283,18 +1337,14 @@ export class Hud {
 
     const S = this._scratch || (this._scratch = {
       fwd: { x: 0, y: 0, z: 0 }, up: { x: 0, y: 0, z: 0 },
-      eL: { x: 0, y: 0, z: 0 }, eR: { x: 0, y: 0, z: 0 },
-      apex: { x: 0, y: 0, z: 0 }, axis: { x: 0, y: 0, z: 0 },
     });
 
     const size = this._screenSize(world);
-    const def = player.def || {};
-    const bowOff = Math.max(20, num(def.lengthM, 200) * 0.45);
     const fwd = rotateVec(player.quaternion, 0, 0, -1, S.fwd);
     const up = rotateVec(player.quaternion, 0, 1, 0, S.up);
-    S.apex.x = player.position.x + fwd.x * bowOff;
-    S.apex.y = player.position.y + fwd.y * bowOff;
-    S.apex.z = player.position.z + fwd.z * bowOff;
+    // The sector radiates from the SHIP, not from a bow-offset apex: it is a
+    // firing envelope, so it belongs centred on the hull, the way the World of
+    // Warships torpedo indicator is centred on the launcher.
 
     const spec = this._aimSpec(world, player);
     const arcDeg = Math.abs(num(sol && sol.arcDeg, this._arcDegFor(player)));
@@ -1306,34 +1356,27 @@ export class Hud {
     }
     dist = clamp(Number.isFinite(dist) ? dist : maxRange * 0.5, 300, maxRange);
 
-    rotateAboutAxis(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z, half, S.eL);
-    rotateAboutAxis(fwd.x, fwd.y, fwd.z, up.x, up.y, up.z, -half, S.eR);
-    S.axis.x = S.apex.x + fwd.x * dist;
-    S.axis.y = S.apex.y + fwd.y * dist;
-    S.axis.z = S.apex.z + fwd.z * dist;
+    const inArc = (sol && typeof sol.inArc === 'boolean') ? sol.inArc : this._inArc(player, target);
+    const inRange = (sol && typeof sol.inRange === 'boolean') ? sol.inRange : true;
 
-    const pApex = this._project(S.apex, world.camera, size.w, size.h);
-    const pAxis = this._project(S.axis, world.camera, size.w, size.h);
-    const pL = this._project({ x: S.apex.x + S.eL.x * dist, y: S.apex.y + S.eL.y * dist, z: S.apex.z + S.eL.z * dist }, world.camera, size.w, size.h);
-    const pR = this._project({ x: S.apex.x + S.eR.x * dist, y: S.apex.y + S.eR.y * dist, z: S.apex.z + S.eR.z * dist }, world.camera, size.w, size.h);
-
-    if (!pApex || !pAxis || !pL || !pR || pApex.behind || pAxis.behind) {
+    // The sector is drawn at the weapon's TRUE arc, on the ship's plane. The old
+    // screen-space fan had to be clamped (CONFIG.ui.arcMaxDisplayDeg) because a
+    // 150 deg fan from a point covers the viewport; projected onto the plane it
+    // does not, so the clamp is no longer needed for the fill.
+    const sector = this._svgSector(
+      this.el.arcWedge, player.position, fwd, up, dist, half, world.camera, size);
+    if (!sector) {
       setClass(arcEl, 'show', false);
       setClass(mountsEl, 'show', false);
       setClass(this.el.lead, 'show', false);
       this._lead.on = false;
       return;
     }
-
-    const inArc = (sol && typeof sol.inArc === 'boolean') ? sol.inArc : this._inArc(player, target);
-    const inRange = (sol && typeof sol.inRange === 'boolean') ? sol.inRange : true;
     setClass(arcEl, 'is-out', !(inArc && inRange));
     setClass(arcEl, 'show', true);
-    const pts = (arr) => arr.map((q) => q.x.toFixed(1) + ',' + q.y.toFixed(1)).join(' ');
-    this._attr(this.el.arcWedge, 'points', pts([pApex, pL, pR]));
-    this._svgLine(this.el.arcEdgeL, pApex, pL);
-    this._svgLine(this.el.arcEdgeR, pApex, pR);
-    this._svgLine(this.el.arcAxis, pApex, pAxis);
+    this._svgLine(this.el.arcEdgeL, sector.apex, sector.left);
+    this._svgLine(this.el.arcEdgeR, sector.apex, sector.right);
+    this._svgLine(this.el.arcAxis, sector.apex, sector.mid);
     // Range rings, WoW-style: the circle the SELECTED weapon can reach, drawn on
     // the ship's plane, plus the wave motion gun's far ring for scale.
     this._svgRing(this.el.range, player.position, up, maxRange, world.camera, size);

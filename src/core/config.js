@@ -80,12 +80,14 @@ export const CONFIG = {
   // HUD — every value src/ui/** reads, so nothing is hardcoded in the UI layer.
   // ---------------------------------------------------------------------------
   ui: {
-    // Half-angle used to DRAW the firing arc. A real 150 deg traverse fan covers
-    // the whole screen and reads as a flat wash rather than a cone, so the drawn
-    // fan is clamped. The TRUE arc is always reported numerically (the weapons
-    // panel shows "3/3 BEARING", the target panel shows IN/OUT OF ARC), so the
-    // clamp never hides whether a shot will actually leave the barrel.
-    arcMaxDisplayDeg: 26,
+    // Safety clamp on the half-angle used to DRAW a firing sector.
+    //
+    // It no longer needs to bite in normal play. The sector is projected onto the
+    // ship's PLANE rather than fanned into screen space, so a real 150 deg arc
+    // reads as a wide pie slice around the ship instead of a flat wash across the
+    // viewport, and it is now drawn at its true value. The clamp only guards
+    // against a degenerate arc in the data.
+    arcMaxDisplayDeg: 85,
     colors: {
       arcIn: 'rgba(120, 255, 170, 0.17)',
       arcOut: 'rgba(255, 150, 90, 0.16)',
