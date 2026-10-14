@@ -27,6 +27,19 @@ const MODELS = join(ASSETS, 'models');
 
 /** Every regular file below `dir`, as paths relative to ROOT. */
 /**
+ * Every `git` call in this file is bounded.
+ *
+ * `execFileSync` has NO default timeout, so a stalled git — which happens on this
+ * host under I/O pressure, where `git status` hangs and git reports "mmap failed:
+ * Operation timed out" — blocks the whole test FILE. The runner then reports the
+ * file as a single cancelled test and the ~18 real tests inside it never run, so
+ * the suite silently drops from 116 to 100 with zero failures. A bounded call
+ * degrades to the filesystem fallback instead, which is the correct behaviour
+ * when git is unavailable.
+ */
+const GIT_TIMEOUT_MS = 15000;
+
+/**
  * Enumerate the files under `dir` that the REPOSITORY actually ships.
  *
  * The asset policy (README "Assets", SPEC §8) is a claim about what this
@@ -54,15 +67,17 @@ function walk(dir) {
 function tracked(dir) {
   try {
     const rel = relative(ROOT, dir) || '.';
-    const listed = execFileSync('git', ['ls-files', '--', rel], { cwd: ROOT, encoding: 'utf8' })
-      .split('\n').map((l) => l.trim()).filter(Boolean)
+    const listed = execFileSync('git', ['ls-files', '--', rel], {
+      cwd: ROOT, encoding: 'utf8', timeout: GIT_TIMEOUT_MS,
+    }).split('\n').map((l) => l.trim()).filter(Boolean)
       .map((l) => join(ROOT, l));
     if (listed.length) return listed;
   } catch { /* git unavailable — fall through */ }
   // No git: walk, but drop anything git would ignore.
   return walk(dir).filter((f) => {
     try {
-      execFileSync('git', ['check-ignore', '-q', '--', relative(ROOT, f)], { cwd: ROOT });
+      execFileSync('git', ['check-ignore', '-q', '--', relative(ROOT, f)],
+                   { cwd: ROOT, timeout: GIT_TIMEOUT_MS });
       return false;                       // exit 0 means "ignored"
     } catch { return true; }
   });

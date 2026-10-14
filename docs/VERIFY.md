@@ -6,15 +6,15 @@
 > `evidence/**` (re-shot), `evidence/revision.json` (regenerated) and
 > `tests/make_revision.mjs` (new).
 >
-> **This file describes the tree at `d864fb9` and nothing else.** It replaces an
-> earlier verification written before all eight hulls were rebuilt; that earlier
-> text is not carried forward, because almost none of it was re-established
-> here. Everything below was re-run from scratch on the frozen revision, and
-> where I could not confirm something I say so rather than inheriting it.
+> **§1–§8 below verify the tree at `d864fb9`.** §9 is the **re-verification at
+> `83d2039`**, the commit that fixed the defects reported here, and it carries
+> the current closed/open status of every finding. Read §9 first for the state
+> of the tree today.
 >
-> **Verdict: the three gates PASS. Two real geometry defects, four smaller ones,
-> and one significant observation.** The defects are reported, not fixed — they
-> are in other people's write scope.
+> **Verdict at `83d2039`: the three gates PASS; both geometry defects are
+> confirmed fixed; one finding (`HUD-ARC-1`) is only HALF fixed** — the `hud.js`
+> comment was corrected, the `config.js` comment was not, and still carries the
+> false claim. See [§9](#9-re-verification-at-83d2039).
 
 ---
 

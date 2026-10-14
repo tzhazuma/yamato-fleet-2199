@@ -82,11 +82,18 @@ export const CONFIG = {
   ui: {
     // Safety clamp on the half-angle used to DRAW a firing sector.
     //
-    // It no longer needs to bite in normal play. The sector is projected onto the
-    // ship's PLANE rather than fanned into screen space, so a real 150 deg arc
-    // reads as a wide pie slice around the ship instead of a flat wash across the
-    // viewport, and it is now drawn at its true value. The clamp only guards
-    // against a degenerate arc in the data.
+    // IT STILL BITES, deliberately. An earlier version of this comment claimed
+    // the plane projection meant the arc "is now drawn at its true value" and
+    // that the clamp "only guards against a degenerate arc". That was wrong and
+    // was caught by verifier-2 as HUD-ARC-1.
+    //
+    // `arcDeg` is a HALF-angle — Ship.inFiringArc compares acos(dot) against it
+    // directly — so the shock cannon's 150 means a 300 deg arc, i.e. nearly
+    // all-round, and drawing that as a fill conveys nothing. Measured: shock 150,
+    // secondary 120 and missile 120 all draw at this cap; torpedo 45 and wmgun 3
+    // draw true. The true value is always reported numerically in the weapons
+    // panel and the target panel, so the clamp never hides whether a shot will
+    // leave the barrel — it only stops the fill from becoming a full disc.
     arcMaxDisplayDeg: 85,
     colors: {
       arcIn: 'rgba(120, 255, 170, 0.17)',
