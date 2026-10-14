@@ -1,15 +1,10 @@
 {
-  "capturedAt": "2026-10-13T07:37:32.056Z",
-  "gitHead": "d864fb951acdb1afeef32bb359ed649d96112b47",
+  "capturedAt": "2026-10-14T16:31:24.586Z",
+  "gitHead": "b5a91c76c6695d92ec59db0439bf1f5d37a89cdc",
   "workingTreeClean": false,
   "note": "Regenerated after the eight-hull armament rebuild and the firing-indicator rework. docs/VERIFY.md states the revision it verified; if this file disagrees with the tree in front of you, re-run the commands in that file rather than trusting its results.",
-  "fileCount": 91,
-  "deletedFiles": [
-    "evidence/03-shared-model-instances.jpg",
-    "evidence/05-explosion.jpg",
-    "evidence/06-closeup-enemy.jpg",
-    "evidence/08-yamato-hero.jpg"
-  ],
+  "fileCount": 92,
+  "deletedFiles": [],
   "files": {
     ".gitignore": {
       "sha256": "931d0a0544d73b5c8d5dc976db59984078cc6eed45e9d06b2949b483b29326a8",
@@ -80,7 +75,7 @@
       "bytes": 387064
     },
     "assets/models/manifest.json": {
-      "sha256": "0dfd7a2fc664a1cc50ba9916a6a62fa0f07ceaae3bc5efd133339b6f9ca67d96",
+      "sha256": "b47202e332820b7a55f00fd78c06503d7049b201b786956a3ce6ad80980243d1",
       "bytes": 62018
     },
     "assets/models/yamato.mtl": {
@@ -88,8 +83,8 @@
       "bytes": 1376
     },
     "assets/models/yamato.obj": {
-      "sha256": "07a7b7ccd33c53cf056fd7868eb1e7c4d74d09b9500aa636eb91e18e75fa7306",
-      "bytes": 668747
+      "sha256": "325b5b2827c108c8dde792b90a243ac282266c9008beeced10e3dd854bea5afd",
+      "bytes": 668751
     },
     "assets/models/yukikaze.mtl": {
       "sha256": "5ac483c10d54effd810e3e41015bc641a71aed67d5e0de682dabf74045a20414",
@@ -108,8 +103,8 @@
       "bytes": 14705
     },
     "docs/VERIFY.md": {
-      "sha256": "7bf9080fab6340b6909d40d2fa2d9f2261b941311fd6d267c64b0bface32fff8",
-      "bytes": 35304
+      "sha256": "4960115639ecebfc380115c242a499950cb85ab0485f7b97849ef2f19b9d9983",
+      "bytes": 39222
     },
     "docs/img/chase-view.jpg": {
       "sha256": "dc0f1950e46e4e883f4d56a361163ec252961f1b53a0b27a2fdf32d190cd65dc",
@@ -152,8 +147,8 @@
       "bytes": 25252
     },
     "docs/research/05-yamato-armament-layout.md": {
-      "sha256": "50c94b3dc91872f84b85c8432153ec73f589a7bffb6194f63384445118bfcb70",
-      "bytes": 11451
+      "sha256": "17ed15fc1340097e94683b8bdf432e42fea4a4bc0a8e48cdc562c4b312708977",
+      "bytes": 11649
     },
     "evidence/01-loaded-hud.jpg": {
       "sha256": "8da7ef3bddfe4495c1f158130dbd5a9f21c4dda6ad97a5ebc7ab753ec5e82512",
@@ -184,8 +179,8 @@
       "bytes": 6672
     },
     "evidence/revision.json": {
-      "sha256": "ab5c30154d030982570ba6da15ce081e398f9d0eb7ef0ebb1572b27e6e1b6224",
-      "bytes": 14021
+      "sha256": "32bd63758d0a27a398ebcfbeec1ee8721a2e794e86e786b373657667b432b435",
+      "bytes": 14196
     },
     "index.html": {
       "sha256": "c8ccc55e6a7b2712fe3b52da097421d9842bd9707227879db6582197d60b5fb8",
@@ -208,8 +203,8 @@
       "bytes": 41535
     },
     "src/core/config.js": {
-      "sha256": "c48b663600a87684c2d21fe021b95d418e88a1401307e2a62b87c50bddac40f3",
-      "bytes": 22585
+      "sha256": "c81287cbc2ea880ab3b85983b755f24a953114f6e109529e6aad2af89a578ef8",
+      "bytes": 23073
     },
     "src/core/fallback_manifest.js": {
       "sha256": "699eb8b5dc8e6e3156cec979ce2082af6c578cd1abcf26d4195282ba6b2deb3d",
@@ -260,8 +255,8 @@
       "bytes": 4960
     },
     "src/ui/hud.js": {
-      "sha256": "8a9a37c19029fbf5ead34a524979d9b56f682a9ac53dd1f301dc52b50433bdd0",
-      "bytes": 86520
+      "sha256": "5ae1052430dfd64193f83d531c2ce9bea136beb6ec066b6eee7083e1f5680a6c",
+      "bytes": 87137
     },
     "src/ui/radar.js": {
       "sha256": "a648a5c7476348a6c4fb105b7f1149605448cb5f7a8e22c006b2b626a8dc6810",
@@ -279,6 +274,10 @@
       "sha256": "d71653fdd79a8d05f9462cd184a4739c246214216c3359b6fdedd8ead17a33f6",
       "bytes": 6883
     },
+    "tests/make_revision.mjs": {
+      "sha256": "d56f28db7787e97cba27bd9f24a547327f145e65577e0cf8156d52dd279e851d",
+      "bytes": 3627
+    },
     "tests/math.test.mjs": {
       "sha256": "58c4a89c544381592a9fce9d17e713ab78ac864dadbb852ef9a5a0b7c2f7611b",
       "bytes": 9030
@@ -288,8 +287,8 @@
       "bytes": 9519
     },
     "tests/provenance.test.mjs": {
-      "sha256": "71714b07cec78606842aa6379c085ff35f5362898a77c2e638f7c3839eaa58f7",
-      "bytes": 23945
+      "sha256": "d6e9b88240843177451278453bce97146f278ea1430584f6e2e2ea67b28f0226",
+      "bytes": 24625
     },
     "tests/rng.test.mjs": {
       "sha256": "2a6114291da9deb7649612ca71040c7b8d215bec6f263694abe2a22de0d205e8",
@@ -300,8 +299,8 @@
       "bytes": 12280
     },
     "tools/gen_models.py": {
-      "sha256": "adb2c0e83f803009242d999442aa95660a4d4f271f9ba4b35f6f452baaffa158",
-      "bytes": 217126
+      "sha256": "7bc58aedcfaf25c6dbb5e93b6e60c2f033e2fae0f30457d59e282c52206a472a",
+      "bytes": 218313
     },
     "tools/render_preview.py": {
       "sha256": "69c80bb26eff734c3284760d9a941f56671a77c2c8dabbce8c59a190ca6b4b4d",
@@ -312,8 +311,8 @@
       "bytes": 4960
     },
     "tools/validate_models.py": {
-      "sha256": "24ff29d46168dae3e87ee6e73f92c70ccabac6e768e897c50181514549fb5f87",
-      "bytes": 58779
+      "sha256": "f83cc6f1bea9bc4c615f51fe0532337b5a9759e300ac3f6dde6bdd45aa2c3116",
+      "bytes": 59381
     },
     "vendor/three/LICENSE": {
       "sha256": "852e0e8699169bf9f6fdc6bda3e682d078dcbc738b5d33e74df594721bff271d",

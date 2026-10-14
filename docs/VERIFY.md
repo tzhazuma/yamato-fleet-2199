@@ -691,3 +691,84 @@ PARTIAL.
    before the Lead froze the tree at `d864fb9`. Both were re-run at the frozen
    revision and both results are reported from there; the earlier run is
    discarded, not inherited.
+
+---
+
+## 10. Lead addendum at `b5a91c7`
+
+> **THIS SECTION IS NOT INDEPENDENT VERIFICATION.** It was written by the Lead —
+> the author of the fixes — because verifier-2 was cut off by host filesystem
+> failures before covering `b5a91c7`. Sections 1–9 above are verifier-2's work
+> and remain the independent record. Independent re-verification of `b5a91c7` is
+> **still outstanding**.
+
+### `HUD-ARC-1` — now fully closed
+
+§9 correctly recorded this as only HALF fixed: `hud.js` was corrected but
+`src/core/config.js` was not touched, so the inaccurate comment survived there
+and directly contradicted the corrected one a few files away.
+
+**Why it did not land**, recorded because the failure mode is more useful than
+the fix: the patch did `s.replace(old, new)` and printed a success message
+**without asserting that the replacement had matched**. The search string ended
+`against a degenerate arc.` while the file reads `against a degenerate arc in the
+data.`, so `replace()` was a no-op and success was reported anyway. Every other
+patch in that batch asserted `s != orig` first; that one did not.
+
+Fixed in `b5a91c7` with the assertion. The comment now states that the clamp is
+deliberate, that `arcDeg` is a HALF-angle, and which weapons draw true.
+
+### Corrected figure
+
+The Yamato's superfiring pivot rise is **9.53 m**. §9's measurement
+(17.47 → 27.00) and the validator agree. The Lead's earlier statement of 9.02 m
+was wrong; the pre-fix figure of 6.53 m was correct for `d864fb9`.
+
+### Test-suite robustness (`b5a91c7`)
+
+`execFileSync` has **no default timeout**, so a stalled `git` blocks the whole
+test FILE. The runner then reports it as a single cancelled test and the ~17 real
+tests inside never run — the suite silently drops from 116 to 100 with **zero
+failures**, which is the dangerous shape. Both `git` calls in
+`tests/provenance.test.mjs` are now bounded at 15 s and degrade to the
+filesystem fallback.
+
+**This was not the cause of the 100/99/1-cancelled observed on this host.** That
+was the filesystem: reading a 1 KB `.mtl` took 58 seconds, and `git` itself was
+failing with `mmap failed: Operation timed out`. Once the I/O recovered the suite
+returned to **116/116, 0 cancelled**. The two conditions are recorded separately
+because "16 tests disappeared" and "the disk was slow" must not be conflated.
+
+### Rendered appearance of the fixed geometry — Lead check
+
+verifier-2 could not do this (browser session wedged, then `open()` began failing
+with Errno 60). Rendered offline with `tools/render_preview.py --place`:
+
+- **SIDE** — the raised superfiring pair reads as stacked turrets with the
+  barrels clearing; the pagoda bridge, funnel, ventral third-bridge pod and red
+  waterline all still read correctly.
+- **TOP** — the two forward barbettes, the distributed AA battery, the aft
+  catapult rails and the bow face are intact.
+- **STERN** — pagoda bridge, twin nozzles, third-bridge pod below the hull.
+
+The 4.3 m barbette raise and the 3.0 m deckhouse raise do not read as an
+artificial stack; the silhouette is still the Yamato. This is a **visual
+judgement by the author**, not an independent check, and it does not replace the
+numeric interpenetration sweeps in §9.
+
+### Gates at `b5a91c7`
+
+| gate | result |
+|---|---|
+| `node --test tests/` | 116/116, 0 cancelled |
+| `validate_models.py assets/models` | exit 0 — 65 836 triangles, 211 hardpoints |
+| `gen_models.py` determinism | 3 runs byte-identical to each other and to shipped `assets/models/**` |
+
+### Still outstanding
+
+1. **Independent re-verification of `b5a91c7`** — the browser E2E items and the
+   rendered-appearance check have never been re-run by anyone but the author.
+2. `evidence/revision.json` records `d864fb9`; it should be regenerated at
+   `b5a91c7`.
+3. `evidence/*.jpg` show the fleet at `d864fb9`, and the Yamato's geometry changed
+   in `83d2039`, so any image containing the Yamato is now one revision stale.
